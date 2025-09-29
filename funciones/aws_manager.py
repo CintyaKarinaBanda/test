@@ -90,6 +90,7 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, checkSnapshot = True ):
                 COMENTARIOS.append(f'Free Storage Space: el espacio libre es menor al 5% en el RDS')
         rds_metrics_data.extend(metric_data)
 
+    latest_snapshot_date = None
     if checkSnapshot:
         response = rds_client.describe_db_snapshots(
             DBInstanceIdentifier=rds_id,
