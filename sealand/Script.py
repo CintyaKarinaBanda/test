@@ -1,5 +1,6 @@
 import sys
-sys.path.append('/usr/xal_monitoring/funciones')
+import os
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'funciones'))
 
 import shutil
 import requests
@@ -22,6 +23,7 @@ def verify_page(url):
             return f"La página {url} devolvió {response.status_code}."
     except requests.exceptions.RequestException as e:
         print(f"No se pudo conectar a {url}. Error: {e}")
+        return f"Error de conexión a {url}: {e}"
 
 if __name__ == "__main__":
     print("Script iniciado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
