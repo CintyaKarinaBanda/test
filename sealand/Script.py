@@ -6,7 +6,6 @@ import requests
 from datetime import datetime
 
 #Funciones extraidas dentro del mismo proyecto
-from drive_manager import upload_file
 from email_manager import send_email
 from bd_manager import send_status
 from excel_manager import write_report, write_comments, write_rds_dashboard_metrics
@@ -53,7 +52,7 @@ if __name__ == "__main__":
     write_comments(comentarios, start_row=21, start_col=7, target_filename=target_filename)
 
     #Actualizacion en Xoc
-    send_status(comentarios, CUENTA, PROJECT)
+    #send_status(comentarios, CUENTA, PROJECT)
     
     #Envio de correo
     send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT)
