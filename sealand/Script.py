@@ -32,10 +32,11 @@ if __name__ == "__main__":
     target_filename = f"excel/CheckList_{today}.xlsx"
     shutil.copy(SOURCE_FILENAME, target_filename)
 
-    lambda_data = process_lambda_metrics(REGION, ROLE_ARN)
+    # Usar configuración específica para Sealand
+    lambda_data = process_lambda_metrics(REGION, ROLE_ARN, 'Sealand')
     write_report(lambda_data, start_row=5, start_col=15, target_filename=target_filename)
     
-    rds_data = process_rds_metrics(RDS_ID, REGION, ROLE_ARN)
+    rds_data = process_rds_metrics(RDS_ID, REGION, ROLE_ARN, 'Sealand')
     write_report([rds_data], start_row=5, start_col=2, target_filename=target_filename)
 
     rds_event_status = get_rds_event_logs(RDS_ID, REGION, ROLE_ARN)
