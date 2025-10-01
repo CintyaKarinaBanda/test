@@ -38,7 +38,18 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
                    for metric in config['rds_metrics']]
 
     rds_metrics_data = []
-    alerts = config['alerts']
+    # Usar configuración nueva si existe, sino usar valores por defecto
+    if 'alerts' in config:
+        alerts = config['alerts']
+    else:
+        # Configuración legacy - usar valores por defecto
+        alerts = {
+            'cpu_alert': True,
+            'cpu_threshold': 95,
+            'cpu_max_ignore': 100,
+            'storage_alert': True,
+            'storage_threshold': 5
+        }
     
     for metric_name, namespace, dimensions in rds_metrics:
         metric_data = get_metric_statistics(cw_client, namespace, dimensions, metric_name)
