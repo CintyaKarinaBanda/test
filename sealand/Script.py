@@ -16,14 +16,23 @@ from config import SOURCE_FILENAME, REGION, FOLDER_ID, RDS_ID, ROLE_ARN, API_LIN
 def verify_page(url):
     #Funcion para consultar API
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         if response.status_code == 200:
             return "Todo ok"
+        elif response.status_code == 503:
+            return f"Servicio temporalmente no disponible (503) - Servidor en mantenimiento o sobrecargado"
+        elif response.status_code == 502:
+            return f"Bad Gateway (502) - Error del servidor upstream"
+        elif response.status_code == 504:
+            return f"Gateway Timeout (504) - Servidor no responde"
         else:
-            return f"La página {url} devolvió {response.status_code}."
+            return f"Error HTTP {response.status_code}: {response.reason}"
+    except requests.exceptions.Timeout:
+        return f"Timeout: El servidor no respondió en 10 segundos"
+    except requests.exceptions.ConnectionError:
+        return f"Error de conexión: No se pudo conectar al servidor"
     except requests.exceptions.RequestException as e:
-        print(f"No se pudo conectar a {url}. Error: {e}")
-        return f"Error de conexión a {url}: {e}"
+        return f"Error de solicitud: {e}"
 
 if __name__ == "__main__":
     print("Script iniciado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))

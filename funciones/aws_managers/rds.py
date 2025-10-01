@@ -8,7 +8,10 @@ def add_comment(comment):
     GLOBAL_COMMENTS.append(comment)
 
 #Inicio del Proceso para la RDS
-def process_rds_metrics(rds_id, REGION, role_arn=None, checkSnapshot = True ):
+def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
+    from .config import get_account_config
+    config = get_account_config(account_name)
+    checkSnapshot = config['check_snapshots']
     # Función para ordenar los datos
     if role_arn:
         session = assume_role(role_arn, REGION)
@@ -21,25 +24,40 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, checkSnapshot = True ):
         cw_client = boto3.client('cloudwatch', region_name=REGION)
 
     response = rds_client.describe_db_instances(DBInstanceIdentifier=rds_id)
-    total_storage = response['DBInstances'][0]['AllocatedStorage'] 
+    db_instance = response['DBInstances'][0]
+    total_storage = db_instance['AllocatedStorage']
+    db_status = db_instance['DBInstanceStatus']
+    
+    # Log del estado de la instancia
+    print(f"Estado RDS {rds_id}: {db_status}")
+    if db_status != 'available':
+        add_comment(f'RDS Status: La instancia está en estado "{db_status}" (no disponible)') 
 
-    rds_metrics = [
-        ('CPUUtilization', 'AWS/RDS', [{'Name': 'DBInstanceIdentifier', 'Value': rds_id}]),
-        ('DatabaseConnections', 'AWS/RDS', [{'Name': 'DBInstanceIdentifier', 'Value': rds_id}]),
-        ('FreeStorageSpace', 'AWS/RDS', [{'Name': 'DBInstanceIdentifier', 'Value': rds_id}])
-    ]
+    # Métricas dinámicas basadas en configuración
+    rds_metrics = [(metric, 'AWS/RDS', [{'Name': 'DBInstanceIdentifier', 'Value': rds_id}]) 
+                   for metric in config['rds_metrics']]
 
     rds_metrics_data = []
+    alerts = config['alerts']
+    
     for metric_name, namespace, dimensions in rds_metrics:
         metric_data = get_metric_statistics(cw_client, namespace, dimensions, metric_name)
-        rds_metrics_data.extend(metric_data)
-        if metric_name == 'CPUUtilization' and len(metric_data) > 1 and metric_data[1] >= 95:
-            add_comment('CPU Utilization: el procentaje es mayor a 95 en el RDS')
-        if metric_name == 'FreeStorageSpace' and len(metric_data) >= 3:
-            metric_data = [round(value / (1024 ** 3), 2) for value in metric_data]
-            free_storage_percent = (metric_data[2] / total_storage) * 100  
-            if free_storage_percent < 5:
-                add_comment(f'Free Storage Space: el espacio libre es menor al 5% en el RDS')
+        
+        # Alerta de CPU
+        if (metric_name == 'CPUUtilization' and alerts['cpu_alert'] and len(metric_data) > 1):
+            cpu_value = metric_data[1]  # Maximum
+            if (cpu_value >= alerts['cpu_threshold'] and cpu_value < alerts['cpu_max_ignore']):
+                add_comment(f'CPU Utilization: el porcentaje es {cpu_value}% (mayor a {alerts["cpu_threshold"]}%) en el RDS')
+        
+        # Alerta de Storage
+        if (metric_name == 'FreeStorageSpace' and alerts['storage_alert'] and len(metric_data) >= 3):
+            free_storage_gb = metric_data[2] / (1024 ** 3)
+            free_storage_percent = (free_storage_gb / total_storage) * 100
+            if free_storage_percent < alerts['storage_threshold']:
+                add_comment(f'Free Storage Space: el espacio libre es {free_storage_percent:.1f}% (menor al {alerts["storage_threshold"]}%) en el RDS')
+            # Convertir todos los valores a GB para mostrar
+            metric_data = tuple(round(value / (1024 ** 3), 2) if value != 0 else 0 for value in metric_data)
+        
         rds_metrics_data.extend(metric_data)
 
     latest_snapshot_date = None
@@ -55,13 +73,18 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, checkSnapshot = True ):
 
         if snapshots:
             latest_snapshot = max(snapshots, key=lambda x: x['SnapshotCreateTime'])
-            latest_snapshot_date = latest_snapshot['SnapshotCreateTime'].strftime('%Y-%m-%d %H:%M:%S')
-
+            latest_snapshot_date = latest_snapshot['SnapshotCreateTime'].strftime('%Y-%m-%d')
+            
+            print(f"Último snapshot: {latest_snapshot_date}")
+            
             today = datetime.now().strftime('%Y-%m-%d')
             yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-            snapshot_date = latest_snapshot['SnapshotCreateTime'].strftime('%Y-%m-%d')
-            if snapshot_date != yesterday and snapshot_date != today:
-                add_comment('Snapshot: hubo un error el crear el respaldo del día de ayer.')
+            
+            if latest_snapshot_date != yesterday and latest_snapshot_date != today:
+                add_comment(f'Snapshot: último respaldo del {latest_snapshot_date} (esperado: {yesterday} o {today})')
+        else:
+            latest_snapshot_date = 'No hay snapshots'
+            add_comment('Snapshot: No se encontraron snapshots automáticos')
 
 
     return (rds_id, *rds_metrics_data, latest_snapshot_date if checkSnapshot else None)

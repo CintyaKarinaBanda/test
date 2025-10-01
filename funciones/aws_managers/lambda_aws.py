@@ -25,7 +25,9 @@ def get_all_lambda_functions(REGION, role_arn=None):
         print(f"Error listando funciones Lambda: {e}")
         return []
 
-def process_lambda_metrics(REGION, role_arn=None):
+def process_lambda_metrics(REGION, role_arn=None, account_name='Default'):
+    from .config import get_account_config
+    config = get_account_config(account_name)
     if role_arn:
         session = assume_role(role_arn, REGION)
         if not session:
