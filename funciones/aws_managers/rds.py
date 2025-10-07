@@ -96,6 +96,8 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
 
     latest_snapshot_date = None
     if checkSnapshot:
+        print(f"DEBUG: Verificando snapshots para RDS {rds_id}")
+        
         response = rds_client.describe_db_snapshots(
             DBInstanceIdentifier=rds_id,
             SnapshotType='automated',
@@ -103,20 +105,33 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
         )
 
         snapshots = response.get('DBSnapshots', [])
+        print(f"DEBUG: Encontrados {len(snapshots)} snapshots automáticos")
+        
         from datetime import datetime, timedelta
 
         if snapshots:
+            # Debug: mostrar todos los snapshots encontrados
+            for i, snap in enumerate(snapshots[:3]):  # Solo los primeros 3
+                snap_date = snap['SnapshotCreateTime'].strftime('%Y-%m-%d %H:%M')
+                print(f"DEBUG: Snapshot {i+1}: {snap['DBSnapshotIdentifier']} - {snap_date} - Status: {snap['Status']}")
+            
             latest_snapshot = max(snapshots, key=lambda x: x['SnapshotCreateTime'])
             latest_snapshot_date = latest_snapshot['SnapshotCreateTime'].strftime('%Y-%m-%d')
             
-            print(f"Último snapshot: {latest_snapshot_date}")
+            print(f"DEBUG: Último snapshot seleccionado: {latest_snapshot['DBSnapshotIdentifier']} - {latest_snapshot_date}")
             
             today = datetime.now().strftime('%Y-%m-%d')
             yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
             
+            print(f"DEBUG: Comparando fechas - Snapshot: {latest_snapshot_date}, Hoy: {today}, Ayer: {yesterday}")
+            
             if latest_snapshot_date != yesterday and latest_snapshot_date != today:
+                print(f"DEBUG: Snapshot desactualizado detectado")
                 add_comment(f'Snapshot: último respaldo del {latest_snapshot_date} (esperado: {yesterday} o {today})')
+            else:
+                print(f"DEBUG: Snapshot está actualizado")
         else:
+            print(f"DEBUG: No se encontraron snapshots automáticos para {rds_id}")
             latest_snapshot_date = 'No hay snapshots'
             add_comment('Snapshot: No se encontraron snapshots automáticos')
 
@@ -150,18 +165,17 @@ def get_rds_event_logs(rds_id, REGION, role_arn=None):
         )
 
         events = response.get('Events', [])
-        error_events = []
+        error_logs = []
 
         if events:
             for event in events:
                 message = event['Message'].lower()
                 if "error" in message or "failure" in message or "down" in message:
-                    error_info = f"{event['Date'].strftime('%Y-%m-%d %H:%M')}: {event['Message']}"
-                    error_events.append(error_info)
+                    error_logs.append(f"{event['Date'].strftime('%Y-%m-%d %H:%M')}: {event['Message']}")
                     print(f"Error en RDS: {event['Message']}, Hora: {event['Date']}")
 
-        if error_events:
-            return f"Errores encontrados ({len(error_events)}): {' | '.join(error_events[:3])}{'...' if len(error_events) > 3 else ''}"
+        if error_logs:
+            return error_logs
         else:
             return "No se encontraron errores en los logs para la RDS."
 
