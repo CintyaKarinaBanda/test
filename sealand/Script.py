@@ -48,7 +48,7 @@ if __name__ == "__main__":
     write_report([rds_data], start_row=5, start_col=2, target_filename=target_filename)
 
     rds_event_status = get_rds_event_logs(RDS_ID, REGION, ROLE_ARN)
-    write_column([rds_event_status], start_row=9, start_col=2, target_filename=target_filename)
+    write_column(rds_event_status, start_row=9, start_col=2, target_filename=target_filename)
 
     api_availability = verify_page(API_LINK)
     write_column([api_availability], start_row=9, start_col=8, target_filename=target_filename)
