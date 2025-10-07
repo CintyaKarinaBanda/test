@@ -1,5 +1,6 @@
 import boto3
 from datetime import datetime, timedelta
+import pytz
 from .utils import assume_role, get_metric_statistics
 
 # Importar función para agregar comentarios globales
@@ -199,8 +200,14 @@ def get_rds_event_logs(rds_id, REGION, role_arn=None):
             for event in events:
                 message = event['Message'].lower()
                 if "error" in message or "failure" in message or "down" in message:
-                    error_logs.append(f"{event['Date'].strftime('%Y-%m-%d %H:%M')}: {event['Message']}")
-                    print(f"Error en RDS: {event['Message']}, Hora: {event['Date']}")
+                    # Convertir UTC a hora local
+                    utc_time = event['Date']
+                    if utc_time.tzinfo is None:
+                        utc_time = pytz.utc.localize(utc_time)
+                    local_time = utc_time.astimezone()
+                    
+                    error_logs.append(f"{local_time.strftime('%Y-%m-%d %H:%M')}: {event['Message']}")
+                    print(f"Error en RDS: {event['Message']}, Hora: {local_time.strftime('%Y-%m-%d %H:%M')}")
 
         if error_logs:
             return error_logs
