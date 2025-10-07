@@ -50,9 +50,6 @@ if __name__ == "__main__":
     rds_event_status = get_rds_event_logs(RDS_ID, REGION, ROLE_ARN)
     write_comments([rds_event_status], start_row=9, start_col=2, target_filename=target_filename)
 
-    rds_dashboard_data = process_rds_dashboard_metrics(RDS_ID, REGION, ROLE_ARN)
-    write_rds_dashboard_metrics(rds_dashboard_data, start_row=14, start_col=2, target_filename=target_filename)
-
     api_availability = verify_page(API_LINK)
     write_comments([api_availability], start_row=9, start_col=8, target_filename=target_filename)
 
@@ -60,7 +57,7 @@ if __name__ == "__main__":
     comentarios = return_comments()
     if not comentarios:
         comentarios.append('Todo Ok')
-    write_comments(comentarios, start_row=21, start_col=7, target_filename=target_filename)
+    write_comments(comentarios, start_row=17, start_col=2, target_filename=target_filename)
 
     #Actualizacion en Xoc
     #send_status(comentarios, CUENTA, PROJECT)
