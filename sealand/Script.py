@@ -51,7 +51,7 @@ if __name__ == "__main__":
     write_column([rds_event_status], start_row=9, start_col=2, target_filename=target_filename)
 
     api_availability = verify_page(API_LINK)
-    write_column([api_availability], start_row=9, start_col=8, target_filename=target_filename)
+    write_column(api_availability, start_row=9, start_col=8, target_filename=target_filename)
 
     #Finalizar el CheckList
     comentarios = return_comments()
