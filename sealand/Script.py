@@ -63,6 +63,6 @@ if __name__ == "__main__":
     #send_status(comentarios, CUENTA, PROJECT)
     
     #Envio de correo
-    send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT)
+    send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, CUENTA)
 
     print("Script terminado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
