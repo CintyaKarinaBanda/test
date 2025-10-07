@@ -8,6 +8,25 @@ def add_comment(comment):
     GLOBAL_COMMENTS.append(comment)
 
 #Inicio del Proceso para la RDS
+def get_rds_status(rds_id, REGION, role_arn=None):
+    """Verifica el estado de la instancia RDS"""
+    if role_arn:
+        session = assume_role(role_arn, REGION)
+        if not session:
+            return 'Error'
+        rds_client = session.client('rds')
+    else:
+        rds_client = boto3.client('rds', region_name=REGION)
+    
+    try:
+        response = rds_client.describe_db_instances(DBInstanceIdentifier=rds_id)
+        db_status = response['DBInstances'][0]['DBInstanceStatus']
+        print(f"Estado RDS {rds_id}: {db_status}")
+        return db_status
+    except Exception as e:
+        print(f"Error obteniendo estado de RDS {rds_id}: {e}")
+        return 'Error'
+
 def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
     from .config import get_account_config
     config = get_account_config(account_name)
@@ -23,15 +42,20 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
         rds_client = boto3.client('rds', region_name=REGION)
         cw_client = boto3.client('cloudwatch', region_name=REGION)
 
+    # Verificar estado de la instancia
+    db_status = get_rds_status(rds_id, REGION, role_arn)
+    
+    if db_status != 'available':
+        add_comment(f'RDS Status: La instancia está en estado "{db_status}" (no disponible)')
+        # Si no está disponible, retornar valores "No disponible"
+        num_metrics = len(config['rds_metrics']) * 3  # 3 estadísticas por métrica
+        unavailable_data = ['No disponible'] * num_metrics
+        return (rds_id, *unavailable_data, 'No disponible' if config['check_snapshots'] else None)
+    
+    # Si está disponible, obtener información completa
     response = rds_client.describe_db_instances(DBInstanceIdentifier=rds_id)
     db_instance = response['DBInstances'][0]
-    total_storage = db_instance['AllocatedStorage']
-    db_status = db_instance['DBInstanceStatus']
-    
-    # Log del estado de la instancia
-    print(f"Estado RDS {rds_id}: {db_status}")
-    if db_status != 'available':
-        add_comment(f'RDS Status: La instancia está en estado "{db_status}" (no disponible)') 
+    total_storage = db_instance['AllocatedStorage'] 
 
     # Métricas dinámicas basadas en configuración
     rds_metrics = [(metric, 'AWS/RDS', [{'Name': 'DBInstanceIdentifier', 'Value': rds_id}]) 
@@ -101,6 +125,12 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
     return (rds_id, *rds_metrics_data, latest_snapshot_date if checkSnapshot else None)
 
 def get_rds_event_logs(rds_id, REGION, role_arn=None):
+    # Verificar estado primero
+    db_status = get_rds_status(rds_id, REGION, role_arn)
+    
+    if db_status != 'available':
+        return f"RDS {rds_id} no está disponible (estado: {db_status}). No se pueden obtener logs."
+    
     if role_arn:
         session = assume_role(role_arn, REGION)
         if not session:
