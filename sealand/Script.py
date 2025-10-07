@@ -9,7 +9,7 @@ from datetime import datetime
 #Funciones extraidas dentro del mismo proyecto
 from email_manager import send_email
 from bd_manager import send_status
-from excel_manager import write_report, write_comments, write_rds_dashboard_metrics
+from excel_manager import write_report, write_column
 from aws_managers import process_rds_metrics, get_rds_event_logs, process_rds_dashboard_metrics, process_lambda_metrics, return_comments
 from config import SOURCE_FILENAME, REGION, FOLDER_ID, RDS_ID, ROLE_ARN, API_LINK, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT
 
@@ -48,16 +48,16 @@ if __name__ == "__main__":
     write_report([rds_data], start_row=5, start_col=2, target_filename=target_filename)
 
     rds_event_status = get_rds_event_logs(RDS_ID, REGION, ROLE_ARN)
-    write_comments([rds_event_status], start_row=9, start_col=2, target_filename=target_filename)
+    write_column([rds_event_status], start_row=9, start_col=2, target_filename=target_filename)
 
     api_availability = verify_page(API_LINK)
-    write_comments([api_availability], start_row=9, start_col=8, target_filename=target_filename)
+    write_column([api_availability], start_row=9, start_col=8, target_filename=target_filename)
 
     #Finalizar el CheckList
     comentarios = return_comments()
     if not comentarios:
         comentarios.append('Todo Ok')
-    write_comments(comentarios, start_row=17, start_col=2, target_filename=target_filename)
+    write_column(comentarios, start_row=17, start_col=2, target_filename=target_filename)
 
     #Actualizacion en Xoc
     #send_status(comentarios, CUENTA, PROJECT)

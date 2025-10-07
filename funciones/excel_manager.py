@@ -13,7 +13,7 @@ def write_report(data, start_row=1, start_col=1, target_filename="CheckList.xlsx
     print(f"Reporte guardado como: {target_filename}")
 
 #Funcion para escribir en una sola columna
-def write_comments(comments, start_row=1, start_col=1, target_filename="CheckList.xlsx"):
+def write_column(comments, start_row=1, start_col=1, target_filename="CheckList.xlsx"):
     wb = load_workbook(target_filename)
     ws = wb.active
 

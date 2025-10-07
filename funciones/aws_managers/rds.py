@@ -47,10 +47,9 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
     
     if db_status != 'available':
         add_comment(f'RDS Status: La instancia está en estado "{db_status}" (no disponible)')
-        # Si no está disponible, retornar valores "No disponible"
-        num_metrics = len(config['rds_metrics']) * 3  # 3 estadísticas por métrica
-        unavailable_data = ['No disponible'] * num_metrics
-        return (rds_id, *unavailable_data, 'No disponible' if config['check_snapshots'] else None)
+        num_metrics = len(config['rds_metrics']) * 3 
+        unavailable_data = ['N/A'] * num_metrics
+        return (rds_id, db_status, *unavailable_data, 'No disponible' if config['check_snapshots'] else None)
     
     # Si está disponible, obtener información completa
     response = rds_client.describe_db_instances(DBInstanceIdentifier=rds_id)
@@ -122,7 +121,7 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
             add_comment('Snapshot: No se encontraron snapshots automáticos')
 
 
-    return (rds_id, *rds_metrics_data, latest_snapshot_date if checkSnapshot else None)
+    return (rds_id, db_status, *rds_metrics_data, latest_snapshot_date if checkSnapshot else None)
 
 def get_rds_event_logs(rds_id, REGION, role_arn=None):
     # Verificar estado primero
@@ -151,17 +150,18 @@ def get_rds_event_logs(rds_id, REGION, role_arn=None):
         )
 
         events = response.get('Events', [])
-        error_found = False
+        error_events = []
 
         if events:
             for event in events:
                 message = event['Message'].lower()
                 if "error" in message or "failure" in message or "down" in message:
+                    error_info = f"{event['Date'].strftime('%Y-%m-%d %H:%M')}: {event['Message']}"
+                    error_events.append(error_info)
                     print(f"Error en RDS: {event['Message']}, Hora: {event['Date']}")
-                    error_found = True
 
-        if error_found:
-            return "Errores encontrados en los logs de la RDS."
+        if error_events:
+            return f"Errores encontrados ({len(error_events)}): {' | '.join(error_events[:3])}{'...' if len(error_events) > 3 else ''}"
         else:
             return "No se encontraron errores en los logs para la RDS."
 
