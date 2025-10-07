@@ -171,12 +171,12 @@ def get_rds_event_logs(rds_id, REGION, role_arn=None):
     db_status = get_rds_status(rds_id, REGION, role_arn)
     
     if db_status != 'available':
-        return f"RDS {rds_id} no está disponible (estado: {db_status}). No se pueden obtener logs."
+        return [f"RDS {rds_id} no está disponible (estado: {db_status}). No se pueden obtener logs."]
     
     if role_arn:
         session = assume_role(role_arn, REGION)
         if not session:
-            return "Error asumiendo rol para RDS logs"
+            return ["Error asumiendo rol para RDS logs"]
         rds_client = session.client('rds')
     else:
         rds_client = boto3.client('rds', region_name=REGION)
@@ -203,13 +203,13 @@ def get_rds_event_logs(rds_id, REGION, role_arn=None):
                     print(f"Error en RDS: {event['Message']}, Hora: {event['Date']}")
 
         if error_logs:
-            return "\n".join(error_logs)
+            return error_logs
         else:
-            return "No se encontraron errores en los logs para la RDS."
+            return ["No se encontraron errores en los logs para la RDS."]
 
     except Exception as e:
         print(f"Error obteniendo los logs de eventos de RDS: {e}")
-        return "Error al obtener los logs de eventos de RDS."
+        return ["Error al obtener los logs de eventos de RDS."]
 
 
 def process_rds_dashboard_metrics(rds_id, REGION, role_arn=None):
