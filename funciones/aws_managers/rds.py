@@ -203,7 +203,7 @@ def get_rds_event_logs(rds_id, REGION, role_arn=None):
                     print(f"Error en RDS: {event['Message']}, Hora: {event['Date']}")
 
         if error_logs:
-            return error_logs
+            return "\n".join(error_logs)
         else:
             return "No se encontraron errores en los logs para la RDS."
 
