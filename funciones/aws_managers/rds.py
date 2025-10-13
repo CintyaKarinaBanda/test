@@ -29,9 +29,25 @@ def get_rds_status(rds_id, REGION, role_arn=None):
         return 'Error'
 
 def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
-    from .config import get_account_config
-    config = get_account_config(account_name)
-    checkSnapshot = config['check_snapshots']
+    try:
+        from .config import get_account_config
+        config = get_account_config(account_name)
+        print(f"Configuración cargada para {account_name}: {config}")
+    except ImportError as e:
+        print(f"Error importando config: {e}")
+        # Configuración por defecto si falla el import
+        config = {
+            'rds_metrics': ['CPUUtilization', 'DatabaseConnections', 'FreeStorageSpace'],
+            'check_snapshots': True,
+            'alerts': {
+                'cpu_alert': True,
+                'cpu_threshold': 95,
+                'cpu_max_ignore': 100,
+                'storage_alert': True,
+                'storage_threshold': 5
+            }
+        }
+    checkSnapshot = config.get('check_snapshots', True)
     # Función para ordenar los datos
     if role_arn:
         session = assume_role(role_arn, REGION)
