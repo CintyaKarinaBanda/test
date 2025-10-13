@@ -42,16 +42,22 @@ if __name__ == "__main__":
     target_filename = f"excel/CheckList_{today}.xlsx"
     shutil.copy(SOURCE_FILENAME, target_filename)
 
-    ec2_data = process_ec2_metrics(REGION, ROLE_ARN, include_names=['lealtad', 'app'], exclude_names=['bastion'])
+    ec2_data = process_ec2_metrics(REGION, ROLE_ARN, include_names=['lealtad'], exclude_names=['bastion'])
     write_report(ec2_data, start_row=5, start_col=2, target_filename=target_filename)
 
+    print(f"Procesando RDS: {RDS_ID}")
     rds_data = process_rds_metrics(RDS_ID, REGION, ROLE_ARN, 'App Lealtad')
+    print(f"Datos RDS obtenidos: {rds_data}")
     write_report([rds_data], start_row=15, start_col=2, target_filename=target_filename)
     
+    print(f"Procesando RDS Dashboard: {RDS_ID}")
     rds_dashboard_data = process_rds_dashboard_metrics(RDS_ID, REGION, ROLE_ARN)
+    print(f"Datos RDS Dashboard obtenidos: {len(rds_dashboard_data)} métricas")
     write_report(rds_dashboard_data, start_row=24, start_col=2, target_filename=target_filename)
 
+    print(f"Obteniendo logs de eventos RDS: {RDS_ID}")
     rds_event_status = get_rds_event_logs(RDS_ID, REGION, ROLE_ARN)
+    print(f"Logs obtenidos: {len(rds_event_status)} eventos")
     write_column(rds_event_status, start_row=19, start_col=2, target_filename=target_filename)
 
     api_availability = verify_page(API_LINK)
