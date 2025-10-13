@@ -67,6 +67,10 @@ if __name__ == "__main__":
     #Actualizacion en Xoc
     send_status(comentarios, CUENTA, PROJECT)
     
+    parametros = {
+        "CPU Utilization": ("Menor al 85% en RDS", "Ok", "NoK"),
+        "Snapshot": ("Respaldo de RDS del día anterior", "Completado", "Incompleto")
+    }
     #Envio de correo
     send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, CUENTA)
 

@@ -1,14 +1,9 @@
 import yagmail
 
 #Funcion para envio del correo
-def send_email(archivo_adjunto, comentarios, remitente, password, destinatario, copias, cuenta):
+def send_email(archivo_adjunto, comentarios, remitente, password, destinatario, copias, cuenta, parametros):
     #Diseño del correo
     comentarios_texto = '\n'.join(comentarios) if isinstance(comentarios, list) else comentarios
-
-    parametros = {
-        "CPU Utilization": ("Menor al 85% en RDS", "Ok", "NoK"),
-        "Snapshot": ("Respaldo de RDS del día anterior", "Completado", "Incompleto")
-    }
 
     message = f"Buenos días, \n\nAdjunto el informe de monitoreo diario (checklist) del sistema. Los resultados de la revisión "
     if comentarios_texto == 'Todo Ok':

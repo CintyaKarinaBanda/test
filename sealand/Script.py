@@ -62,7 +62,11 @@ if __name__ == "__main__":
     #Actualizacion en Xoc
     send_status(comentarios, CUENTA, PROJECT)
     
+    parametros = {
+        "Status Check": ("Estado de instancia, sistema y volumen", "Ok", "NoK"),
+        "CPU Utilization": ("Menor al 85% en RDS e instancias", "Ok", "NoK"),
+    }
     #Envio de correo
-    send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, CUENTA)
+    send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, CUENTA, parametros)
 
     print("Script terminado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
