@@ -12,9 +12,9 @@ COMENTARIOS = []
 def get_instance_status(REGION, include_names=None, exclude_names=None, all_instances=False, ROLE_ARN=None):
     #Función para trabajar simultaneamente
     if ROLE_ARN:
-        credentials = assume_role(ROLE_ARN, REGION)
-        ec2_client = boto3.client('ec2', region_name=REGION, **credentials)
-        cw_client = boto3.client('cloudwatch', region_name=REGION, **credentials)
+        session = assume_role(ROLE_ARN, REGION)
+        ec2_client = session.client('ec2')
+        cw_client = session.client('cloudwatch')
     else:
         ec2_client = boto3.client('ec2', region_name=REGION)
         cw_client = boto3.client('cloudwatch', region_name=REGION)
