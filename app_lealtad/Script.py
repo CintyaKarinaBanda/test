@@ -42,7 +42,7 @@ if __name__ == "__main__":
     target_filename = f"excel/CheckList_{today}.xlsx"
     shutil.copy(SOURCE_FILENAME, target_filename)
 
-    ec2_data = process_ec2_metrics(REGION, ROLE_ARN, include_names=['lealtad', 'app'], exclude_names=['bastion'], ACOUNT_NAME='AppLealtad')
+    ec2_data = process_ec2_metrics(REGION, ROLE_ARN, include_names=['lealtad', 'app'], exclude_names=['bastion'])
     write_report(ec2_data, start_row=5, start_col=2, target_filename=target_filename)
 
     rds_data = process_rds_metrics(RDS_ID, REGION, ROLE_ARN, 'App Lealtad')
