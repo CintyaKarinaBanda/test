@@ -68,8 +68,8 @@ if __name__ == "__main__":
     send_status(comentarios, CUENTA, PROJECT, host, database, user, password)
     
     parametros = {
+        "Status Check": ("Estado de instancia, sistema y volumen", "Ok", "NoK"),
         "CPU Utilization": ("Menor al 85% en RDS", "Ok", "NoK"),
-        "Snapshot": ("Respaldo de RDS del día anterior", "Completado", "Incompleto")
     }
     #Envio de correo
     send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, CUENTA, parametros)
