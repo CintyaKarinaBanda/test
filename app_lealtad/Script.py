@@ -12,7 +12,7 @@ from bd_manager import send_status
 from excel_manager import write_report, write_column
 from aws_managers import process_rds_metrics, get_rds_event_logs, process_rds_dashboard_metrics, return_comments
 from aws_managers.ec2 import process_ec2_metrics, return_ec2_comments
-from config import SOURCE_FILENAME, REGION, RDS_ID, ROLE_ARN, API_LINK, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT
+from config import SOURCE_FILENAME, REGION, RDS_ID, ROLE_ARN, API_LINK, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password
 
 def verify_page(url):
     #Funcion para consultar API
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     write_column(comentarios, start_row=13, start_col=15, target_filename=target_filename)
 
     #Actualizacion en Xoc
-    send_status(comentarios, CUENTA, PROJECT)
+    send_status(comentarios, CUENTA, PROJECT, host, database, user, password)
     
     parametros = {
         "CPU Utilization": ("Menor al 85% en RDS", "Ok", "NoK"),
