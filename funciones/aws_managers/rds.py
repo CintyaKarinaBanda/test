@@ -47,7 +47,6 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
     db_status = get_rds_status(rds_id, REGION, role_arn)
     
     if db_status != 'available':
-        add_comment(f'RDS Status: La instancia está en estado "{db_status}" (no disponible)')
         num_metrics = len(config['rds_metrics']) * 3 
         unavailable_data = ['N/A'] * num_metrics
         return (rds_id, db_status, *unavailable_data, 'No disponible' if config['check_snapshots'] else None)
@@ -96,9 +95,7 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
         rds_metrics_data.extend(metric_data)
 
     latest_snapshot_date = None
-    if checkSnapshot:
-        print(f"DEBUG: Verificando snapshots para RDS {rds_id}")
-        
+    if checkSnapshot:        
         # Primero intentar como instancia DB
         try:
             response = rds_client.describe_db_snapshots(
@@ -107,22 +104,18 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
                 IncludePublic=False
             )
             snapshots = response.get('DBSnapshots', [])
-            print(f"DEBUG: Encontrados {len(snapshots)} snapshots de instancia DB")
         except Exception as e:
-            print(f"DEBUG: No es una instancia DB o error: {e}")
             snapshots = []
         
         # Si no hay snapshots de instancia, intentar como cluster
         if not snapshots:
             try:
-                print(f"DEBUG: Buscando snapshots de cluster para {rds_id}")
                 response = rds_client.describe_db_cluster_snapshots(
                     DBClusterIdentifier=rds_id,
                     SnapshotType='automated',
                     IncludePublic=False
                 )
                 cluster_snapshots = response.get('DBClusterSnapshots', [])
-                print(f"DEBUG: Encontrados {len(cluster_snapshots)} snapshots de cluster")
                 
                 # Convertir formato de cluster a formato de instancia para compatibilidad
                 snapshots = [{
@@ -132,35 +125,24 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
                 } for snap in cluster_snapshots]
                 
             except Exception as e:
-                print(f"DEBUG: Tampoco es un cluster o error: {e}")
                 snapshots = []
         
         from datetime import datetime, timedelta
 
         if snapshots:
-            print(f"DEBUG: Total de snapshots encontrados: {len(snapshots)}")
-            # Debug: mostrar todos los snapshots encontrados
             for i, snap in enumerate(snapshots[:3]):  # Solo los primeros 3
                 snap_date = snap['SnapshotCreateTime'].strftime('%Y-%m-%d %H:%M')
-                print(f"DEBUG: Snapshot {i+1}: {snap['DBSnapshotIdentifier']} - {snap_date} - Status: {snap['Status']}")
             
             latest_snapshot = max(snapshots, key=lambda x: x['SnapshotCreateTime'])
             latest_snapshot_date = latest_snapshot['SnapshotCreateTime'].strftime('%Y-%m-%d')
             
-            print(f"DEBUG: Último snapshot seleccionado: {latest_snapshot['DBSnapshotIdentifier']} - {latest_snapshot_date}")
             
             today = datetime.now().strftime('%Y-%m-%d')
             yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-            
-            print(f"DEBUG: Comparando fechas - Snapshot: {latest_snapshot_date}, Hoy: {today}, Ayer: {yesterday}")
-            
+                        
             if latest_snapshot_date != yesterday and latest_snapshot_date != today:
-                print(f"DEBUG: Snapshot desactualizado detectado")
                 add_comment(f'Snapshot: último respaldo del {latest_snapshot_date} (esperado: {yesterday} o {today})')
-            else:
-                print(f"DEBUG: Snapshot está actualizado")
         else:
-            print(f"DEBUG: No se encontraron snapshots automáticos para {rds_id} (ni instancia ni cluster)")
             latest_snapshot_date = 'No hay snapshots'
             add_comment('Snapshot: No se encontraron snapshots automáticos (verificado instancia y cluster)')
 

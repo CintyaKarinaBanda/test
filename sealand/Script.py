@@ -42,7 +42,7 @@ if __name__ == "__main__":
     shutil.copy(SOURCE_FILENAME, target_filename)
 
     lambda_data = process_lambda_metrics(REGION, ROLE_ARN)
-    write_report(lambda_data, start_row=5, start_col=15, target_filename=target_filename)
+    write_report(lambda_data, start_row=5, start_col=16, target_filename=target_filename)
     
     rds_data = process_rds_metrics(RDS_ID, REGION, ROLE_ARN, 'Sealand')
     write_report([rds_data], start_row=5, start_col=2, target_filename=target_filename)
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     write_column(comentarios, start_row=17, start_col=2, target_filename=target_filename)
 
     #Actualizacion en Xoc
-    #send_status(comentarios, CUENTA, PROJECT)
+    send_status(comentarios, CUENTA, PROJECT)
     
     #Envio de correo
     send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, CUENTA)
