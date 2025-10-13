@@ -1,7 +1,14 @@
 import psycopg2
 from datetime import date
 import os
-from funciones.config import host, database, user, password
+import sys
+import os
+sys.path.insert(0, os.path.dirname(__file__))
+import config
+host = config.host
+database = config.database
+user = config.user
+password = config.password
 
 def send_status(comments, cuenta, project):
     comments_texto = '\n'.join(comments) if isinstance(comments, list) else comments
