@@ -68,7 +68,7 @@ if __name__ == "__main__":
     comentarios.extend(return_ec2_comments())
     if not comentarios:
         comentarios.append('Todo Ok')
-    write_column(comentarios, start_row=14, start_col=15, target_filename=target_filename)
+    write_column(comentarios, start_row=19, start_col=15, target_filename=target_filename)
 
     #Actualizacion en Xoc
     send_status(comentarios, CUENTA, PROJECT)
