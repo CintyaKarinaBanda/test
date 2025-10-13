@@ -1,5 +1,6 @@
 import psycopg2
 from datetime import date
+from .funciones.config import host, database, user, password
 
 def send_status(comments, cuenta, project):
     comments_texto = '\n'.join(comments) if isinstance(comments, list) else comments
@@ -8,10 +9,10 @@ def send_status(comments, cuenta, project):
 
     try:
         conn = psycopg2.connect(
-            host="3.239.166.161",
-            database="xoc",
-            user="xoc_user",
-            password="xoc_user!"
+            host=host,
+            database=database,
+            user=user,
+            password=password
         )
         cursor = conn.cursor()
 
