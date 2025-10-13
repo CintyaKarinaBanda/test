@@ -1,6 +1,12 @@
 import psycopg2
 from datetime import date
-from config import host, database, user, password
+import os
+
+# Database config with environment variables
+host = os.getenv('DB_HOST', 'localhost')
+database = os.getenv('DB_NAME', 'xoc')
+user = os.getenv('DB_USER', 'xoc_user')
+password = os.getenv('DB_PASSWORD', 'xoc_user!')
 
 def send_status(comments, cuenta, project):
     comments_texto = '\n'.join(comments) if isinstance(comments, list) else comments
