@@ -95,7 +95,7 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
         # Alerta de CPU
         if (metric_name == 'CPUUtilization' and alerts['cpu_alert'] and len(metric_data) > 1):
             cpu_value = metric_data[1]  # Maximum
-            if (cpu_value >= alerts['cpu_threshold'] and cpu_value != alerts['cpu_max_ignore']):
+            if (cpu_value >= alerts['cpu_threshold'] and cpu_value < alerts.get('cpu_max_ignore', 999)):
                 add_comment(f'CPU Utilization: el porcentaje es {cpu_value}% (mayor a {alerts["cpu_threshold"]}%) en el RDS')
         
         # Alerta de Storage
