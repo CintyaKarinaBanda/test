@@ -32,7 +32,6 @@ def process_rds_metrics(rds_id, REGION, role_arn=None, account_name='Default'):
     try:
         from .config import get_account_config
         config = get_account_config(account_name)
-        print(f"Configuración cargada para {account_name}: {config}")
     except ImportError as e:
         print(f"Error importando config: {e}")
         # Configuración por defecto si falla el import
