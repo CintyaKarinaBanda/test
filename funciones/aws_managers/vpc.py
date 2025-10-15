@@ -55,8 +55,11 @@ def process_single_vpc_metrics(ec2_client, vpc_id, vpc_name):
     security_groups_status = check_security_groups(ec2_client, vpc_id)
     nacls_status = check_nacls(ec2_client, vpc_id)
     
+    # 4. Métricas de túneles VPN
+    tunnel_metrics = check_vpn_tunnel_metrics(ec2_client, vpc_id)
+    
     return (vpc_name, vpc_id, subnets_status, route_tables_status, 
-            gateways_status, dns_status, security_groups_status, nacls_status)
+            gateways_status, dns_status, security_groups_status, nacls_status, *tunnel_metrics)
 
 def check_subnets(ec2_client, vpc_id):
     """Verificar subredes de la VPC"""
@@ -218,6 +221,70 @@ def check_nacls(ec2_client, vpc_id):
         return 'Error'
 
 
+
+def check_vpn_tunnel_metrics(ec2_client, vpc_id):
+    """Verificar métricas de túneles VPN"""
+    try:
+        # Obtener conexiones VPN asociadas a la VPC
+        vpn_response = ec2_client.describe_vpn_connections(
+            Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}]
+        )
+        
+        if not vpn_response['VpnConnections']:
+            return ('Sin VPN', 'Sin VPN', 'Sin VPN')
+        
+        # Crear cliente CloudWatch
+        from .utils import assume_role
+        session = assume_role(None, ec2_client.meta.region_name) if hasattr(ec2_client, 'meta') else None
+        if session:
+            cw_client = session.client('cloudwatch')
+        else:
+            import boto3
+            cw_client = boto3.client('cloudwatch', region_name='us-east-1')
+        
+        tunnel_data_in = 0
+        tunnel_data_out = 0
+        tunnel_state = 0
+        
+        for vpn_conn in vpn_response['VpnConnections']:
+            vpn_id = vpn_conn['VpnConnectionId']
+            
+            # Métricas de túnel
+            from .utils import get_metric_statistics
+            
+            # TunnelDataIn (Sum)
+            data_in = get_metric_statistics(
+                cw_client, 'AWS/VPN', 
+                [{'Name': 'VpnId', 'Value': vpn_id}], 
+                'TunnelDataIn', ['Sum']
+            )
+            tunnel_data_in += data_in[0] if data_in else 0
+            
+            # TunnelDataOut (Sum)
+            data_out = get_metric_statistics(
+                cw_client, 'AWS/VPN', 
+                [{'Name': 'VpnId', 'Value': vpn_id}], 
+                'TunnelDataOut', ['Sum']
+            )
+            tunnel_data_out += data_out[0] if data_out else 0
+            
+            # TunnelState (Average)
+            state = get_metric_statistics(
+                cw_client, 'AWS/VPN', 
+                [{'Name': 'VpnId', 'Value': vpn_id}], 
+                'TunnelState', ['Average']
+            )
+            tunnel_state = max(tunnel_state, state[0] if state else 0)
+        
+        # Alertas
+        if tunnel_state < 1:
+            COMENTARIOS.append(f'VPC {vpc_id}: Túneles VPN desconectados (estado: {tunnel_state})')
+        
+        return (round(tunnel_data_in/1024/1024, 2), round(tunnel_data_out/1024/1024, 2), round(tunnel_state, 2))
+        
+    except Exception as e:
+        COMENTARIOS.append(f'VPC {vpc_id}: Error verificando métricas VPN - {e}')
+        return ('Error', 'Error', 'Error')
 
 def process_vpc_metrics(REGION, ROLE_ARN, vpc_names=None, all_vpcs=False):
     """Función principal para procesar métricas de VPC"""
