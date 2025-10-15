@@ -46,16 +46,14 @@ def process_single_vpc_metrics(ec2_client, vpc_id, vpc_name):
     # 1. Conectividad de red
     subnets_status = check_subnets(ec2_client, vpc_id)
     route_tables_status = check_route_tables(ec2_client, vpc_id)
-    gateways_status = check_gateways(ec2_client, vpc_id)
-    
+
     # 2. Resolución DNS
     dns_status = check_dns_settings(ec2_client, vpc_id)
     
     # 4. Métricas de túneles VPN
     tunnel_metrics = check_vpn_tunnel_metrics(ec2_client, vpc_id)
     
-    return (vpc_name, vpc_id, subnets_status, route_tables_status, 
-            gateways_status, dns_status, *tunnel_metrics)
+    return (vpc_name, vpc_id, subnets_status, route_tables_status, dns_status, *tunnel_metrics)
 
 def check_subnets(ec2_client, vpc_id):
     """Verificar subredes de la VPC"""
@@ -103,40 +101,6 @@ def check_route_tables(ec2_client, vpc_id):
         COMENTARIOS.append(f'VPC {vpc_id}: Error verificando rutas - {e}')
         return 'Error'
 
-def check_gateways(ec2_client, vpc_id):
-    """Verificar gateways (IGW, NAT, VGW)"""
-    try:
-        gateways = []
-        
-        # Internet Gateway
-        igw_response = ec2_client.describe_internet_gateways(
-            Filters=[{'Name': 'attachment.vpc-id', 'Values': [vpc_id]}]
-        )
-        if igw_response['InternetGateways']:
-            gateways.append('IGW')
-        
-        # NAT Gateway
-        nat_response = ec2_client.describe_nat_gateways(
-            Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}]
-        )
-        available_nats = [n for n in nat_response['NatGateways'] if n['State'] == 'available']
-        if available_nats:
-            gateways.append(f'NAT({len(available_nats)})')
-        
-        # VPN Gateway
-        vpn_response = ec2_client.describe_vpn_gateways(
-            Filters=[{'Name': 'attachment.vpc-id', 'Values': [vpc_id]}]
-        )
-        if vpn_response['VpnGateways']:
-            gateways.append('VGW')
-        
-        if not gateways:
-            return 'Sin gateways'
-        
-        return ', '.join(gateways)
-    except Exception as e:
-        COMENTARIOS.append(f'VPC {vpc_id}: Error verificando gateways - {e}')
-        return 'Error'
 
 def check_dns_settings(ec2_client, vpc_id):
     """Verificar configuración DNS"""
@@ -163,7 +127,7 @@ def check_dns_settings(ec2_client, vpc_id):
         return 'Error'
 
 def check_vpn_tunnel_metrics(ec2_client, vpc_id):
-    """Verificar métricas de túneles VPN"""
+    """Verificar métricas de túneles VPN con Min, Max, Avg"""
     try:
         # Obtener VPN Gateways asociados a la VPC
         vgw_response = ec2_client.describe_vpn_gateways(
@@ -171,7 +135,7 @@ def check_vpn_tunnel_metrics(ec2_client, vpc_id):
         )
         
         if not vgw_response['VpnGateways']:
-            return ('Sin VPN', 'Sin VPN', 'Sin VPN')
+            return ('Sin VPN',) * 9  # 3 métricas x 3 valores cada una
         
         # Obtener conexiones VPN para estos VGWs
         vpn_connections = []
@@ -182,7 +146,7 @@ def check_vpn_tunnel_metrics(ec2_client, vpc_id):
             vpn_connections.extend(vpn_response['VpnConnections'])
         
         if not vpn_connections:
-            return ('Sin VPN', 'Sin VPN', 'Sin VPN')
+            return ('Sin VPN',) * 9
         
         # Crear cliente CloudWatch
         from .utils import assume_role
@@ -193,16 +157,16 @@ def check_vpn_tunnel_metrics(ec2_client, vpc_id):
             import boto3
             cw_client = boto3.client('cloudwatch', region_name='us-east-1')
         
-        tunnel_data_in = 0
-        tunnel_data_out = 0
-        tunnel_state = 0
+        # Acumuladores para todas las métricas
+        vpn_data_in_metrics = []
+        vpn_data_out_metrics = []
+        vpn_state_metrics = []
+        
+        from .utils import get_metric_statistics
         
         for vpn_conn in vpn_connections:
             vpn_id = vpn_conn['VpnConnectionId']
             print(f"Procesando VPN: {vpn_id}")
-            
-            # Métricas de túnel - necesitamos especificar TunnelIpAddress
-            from .utils import get_metric_statistics
             
             # Obtener IPs de los túneles
             tunnel_ips = []
@@ -219,45 +183,59 @@ def check_vpn_tunnel_metrics(ec2_client, vpc_id):
                 if tunnel_ip:
                     dimensions.append({'Name': 'TunnelIpAddress', 'Value': tunnel_ip})
                 
-                # TunnelDataIn (Sum)
+                # TunnelDataIn (Min, Max, Avg)
                 data_in = get_metric_statistics(
-                    cw_client, 'AWS/VPN', dimensions, 'TunnelDataIn', ['Sum']
+                    cw_client, 'AWS/VPN', dimensions, 'TunnelDataIn'
                 )
-                if data_in and data_in[0] > 0:
-                    tunnel_data_in += data_in[0]
-                    print(f"TunnelDataIn: {data_in[0]} bytes")
+                if data_in and any(x != 0 for x in data_in):
+                    # Convertir a MB
+                    data_in_mb = tuple(round(x / (1024 * 1024), 2) for x in data_in)
+                    vpn_data_in_metrics.append(data_in_mb)
+                    print(f"TunnelDataIn: Min={data_in_mb[0]}, Max={data_in_mb[1]}, Avg={data_in_mb[2]} MB")
                 
-                # TunnelDataOut (Sum)
+                # TunnelDataOut (Min, Max, Avg)
                 data_out = get_metric_statistics(
-                    cw_client, 'AWS/VPN', dimensions, 'TunnelDataOut', ['Sum']
+                    cw_client, 'AWS/VPN', dimensions, 'TunnelDataOut'
                 )
-                if data_out and data_out[0] > 0:
-                    tunnel_data_out += data_out[0]
-                    print(f"TunnelDataOut: {data_out[0]} bytes")
+                if data_out and any(x != 0 for x in data_out):
+                    # Convertir a MB
+                    data_out_mb = tuple(round(x / (1024 * 1024), 2) for x in data_out)
+                    vpn_data_out_metrics.append(data_out_mb)
+                    print(f"TunnelDataOut: Min={data_out_mb[0]}, Max={data_out_mb[1]}, Avg={data_out_mb[2]} MB")
                 
-                # TunnelState (Average)
+                # TunnelState (Min, Max, Avg)
                 state = get_metric_statistics(
-                    cw_client, 'AWS/VPN', dimensions, 'TunnelState', ['Average']
+                    cw_client, 'AWS/VPN', dimensions, 'TunnelState'
                 )
-                if state and state[0] > tunnel_state:
-                    tunnel_state = state[0]
-                    print(f"TunnelState: {state[0]}")
+                if state:
+                    vpn_state_metrics.append(state)
+                    print(f"TunnelState: Min={state[0]}, Max={state[1]}, Avg={state[2]}")
+        
+        # Agregar métricas de todos los túneles
+        def aggregate_metrics(metrics_list):
+            if not metrics_list:
+                return (0, 0, 0)
+            mins = [m[0] for m in metrics_list]
+            maxs = [m[1] for m in metrics_list]
+            avgs = [m[2] for m in metrics_list]
+            return (min(mins), max(maxs), sum(avgs)/len(avgs))
+        
+        final_data_in = aggregate_metrics(vpn_data_in_metrics)
+        final_data_out = aggregate_metrics(vpn_data_out_metrics)
+        final_state = aggregate_metrics(vpn_state_metrics)
         
         # Alertas
-        if tunnel_state < 1:
-            COMENTARIOS.append(f'VPC {vpc_id}: Túneles VPN desconectados (estado: {tunnel_state})')
+        if final_state[2] < 1:  # Average state
+            COMENTARIOS.append(f'VPC {vpc_id}: Túneles VPN desconectados (estado promedio: {final_state[2]:.2f})')
         
-        # Convertir bytes a MB y formatear
-        data_in_mb = round(tunnel_data_in / (1024 * 1024), 2) if tunnel_data_in > 0 else 0
-        data_out_mb = round(tunnel_data_out / (1024 * 1024), 2) if tunnel_data_out > 0 else 0
+        print(f"Resumen VPC {vpc_id}: DataIn={final_data_in}, DataOut={final_data_out}, State={final_state}")
         
-        print(f"Resumen VPC {vpc_id}: DataIn={data_in_mb}MB, DataOut={data_out_mb}MB, State={tunnel_state}")
-        
-        return (data_in_mb, data_out_mb, round(tunnel_state, 2))
+        # Retornar 9 valores: 3 para cada métrica (Min, Max, Avg)
+        return (*final_data_in, *final_data_out, *final_state)
         
     except Exception as e:
         COMENTARIOS.append(f'VPC {vpc_id}: Error verificando métricas VPN - {e}')
-        return ('Error', 'Error', 'Error')
+        return ('Error',) * 9
 
 def process_vpc_metrics(REGION, ROLE_ARN, vpc_names=None, all_vpcs=False):
     """Función principal para procesar métricas de VPC"""
