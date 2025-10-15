@@ -30,7 +30,7 @@ def get_metric_statistics(cw_client, namespace, dimensions, metric_name, statist
         statistics = ['Minimum', 'Maximum', 'Average']
 
     end_time = datetime.utcnow()
-    start_time = end_time - timedelta(hours=1)
+    start_time = end_time - timedelta(hours=12)  # Cambiar a 12 horas para capturar más datos
 
     try:
         response = cw_client.get_metric_statistics(
@@ -39,12 +39,36 @@ def get_metric_statistics(cw_client, namespace, dimensions, metric_name, statist
             Dimensions=dimensions,
             StartTime=start_time,
             EndTime=end_time,
-            Period=43200, #12 HORAS
+            Period=3600, # 1 HORA para más granularidad
             Statistics=statistics
         )
         if response['Datapoints']:
-            data = response['Datapoints'][0]
-            return tuple(round(data.get(stat, 0.0), 2) for stat in statistics)
+            # Obtener todos los datapoints y calcular estadísticas reales
+            datapoints = response['Datapoints']
+            values = []
+            for dp in datapoints:
+                for stat in statistics:
+                    if stat in dp:
+                        values.append(dp[stat])
+            
+            if values:
+                if len(statistics) == 1:
+                    return (round(sum(values), 2),)
+                else:
+                    # Para múltiples estadísticas, tomar el máximo de cada tipo
+                    result = []
+                    for stat in statistics:
+                        stat_values = [dp.get(stat, 0) for dp in datapoints if stat in dp]
+                        if stat == 'Minimum':
+                            result.append(round(min(stat_values) if stat_values else 0, 2))
+                        elif stat == 'Maximum':
+                            result.append(round(max(stat_values) if stat_values else 0, 2))
+                        elif stat == 'Average':
+                            result.append(round(sum(stat_values)/len(stat_values) if stat_values else 0, 2))
+                        else:
+                            result.append(round(sum(stat_values) if stat_values else 0, 2))
+                    return tuple(result)
+            return tuple(0.0 for _ in statistics)
         else:
             return tuple(0.0 for _ in statistics)
     except Exception as e:

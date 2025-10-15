@@ -174,9 +174,12 @@ def check_vpn_tunnel_metrics(ec2_client, vpc_id):
         
         from .utils import get_metric_statistics
         
+        print(f"Encontradas {len(vpn_connections)} conexiones VPN para VPC {vpc_id}")
+        
         for vpn_conn in vpn_connections:
             vpn_id = vpn_conn['VpnConnectionId']
-            print(f"Procesando VPN: {vpn_id}")
+            vpn_state = vpn_conn.get('State', 'unknown')
+            print(f"Procesando VPN: {vpn_id} (Estado: {vpn_state})")
             
             # Obtener IPs de los túneles
             tunnel_ips = []
@@ -197,21 +200,27 @@ def check_vpn_tunnel_metrics(ec2_client, vpc_id):
                 data_in = get_metric_statistics(
                     cw_client, 'AWS/VPN', dimensions, 'TunnelDataIn'
                 )
+                print(f"TunnelDataIn raw: {data_in}")
                 if data_in and any(x != 0 for x in data_in):
                     # Convertir a MB
                     data_in_mb = tuple(round(x / (1024 * 1024), 2) for x in data_in)
                     vpn_data_in_metrics.append(data_in_mb)
                     print(f"TunnelDataIn: Min={data_in_mb[0]}, Max={data_in_mb[1]}, Avg={data_in_mb[2]} MB")
+                elif data_in:
+                    print(f"TunnelDataIn: datos encontrados pero todos son 0: {data_in}")
                 
                 # TunnelDataOut (Min, Max, Avg)
                 data_out = get_metric_statistics(
                     cw_client, 'AWS/VPN', dimensions, 'TunnelDataOut'
                 )
+                print(f"TunnelDataOut raw: {data_out}")
                 if data_out and any(x != 0 for x in data_out):
                     # Convertir a MB
                     data_out_mb = tuple(round(x / (1024 * 1024), 2) for x in data_out)
                     vpn_data_out_metrics.append(data_out_mb)
                     print(f"TunnelDataOut: Min={data_out_mb[0]}, Max={data_out_mb[1]}, Avg={data_out_mb[2]} MB")
+                elif data_out:
+                    print(f"TunnelDataOut: datos encontrados pero todos son 0: {data_out}")
                 
                 # TunnelState (Min, Max, Avg)
                 state = get_metric_statistics(
