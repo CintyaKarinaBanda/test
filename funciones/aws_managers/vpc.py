@@ -148,14 +148,24 @@ def check_vpn_tunnel_metrics(ec2_client, vpc_id):
         if not vpn_connections:
             return ('Sin VPN',) * 9
         
-        # Crear cliente CloudWatch
-        from .utils import assume_role
-        session = assume_role(None, ec2_client.meta.region_name) if hasattr(ec2_client, 'meta') else None
-        if session:
-            cw_client = session.client('cloudwatch')
+        # Crear cliente CloudWatch usando la misma sesión que ec2_client
+        import boto3
+        if hasattr(ec2_client, '_client_config') and hasattr(ec2_client._client_config, 'region_name'):
+            region = ec2_client._client_config.region_name
         else:
-            import boto3
-            cw_client = boto3.client('cloudwatch', region_name='us-east-1')
+            region = 'us-east-1'
+        
+        # Si ec2_client tiene credenciales de sesión, usar las mismas
+        try:
+            # Intentar usar las mismas credenciales que ec2_client
+            cw_client = boto3.client('cloudwatch', 
+                                   region_name=region,
+                                   aws_access_key_id=ec2_client._request_signer._credentials.access_key,
+                                   aws_secret_access_key=ec2_client._request_signer._credentials.secret_key,
+                                   aws_session_token=ec2_client._request_signer._credentials.token)
+        except:
+            # Fallback a cliente por defecto
+            cw_client = boto3.client('cloudwatch', region_name=region)
         
         # Acumuladores para todas las métricas
         vpn_data_in_metrics = []
