@@ -8,6 +8,9 @@ def get_vpc_status(REGION, vpc_names=None, all_vpcs=False, ROLE_ARN=None):
     """Función para obtener estado de VPCs"""
     if ROLE_ARN:
         session = assume_role(ROLE_ARN, REGION)
+        if not session:
+            print(f"Error: No se pudo asumir el rol {ROLE_ARN}")
+            return []
         ec2_client = session.client('ec2')
     else:
         ec2_client = boto3.client('ec2', region_name=REGION)
@@ -30,14 +33,14 @@ def get_vpc_status(REGION, vpc_names=None, all_vpcs=False, ROLE_ARN=None):
                 should_include = any(name.lower() in vpc_name.lower() for name in vpc_names)
             
             if should_include:
-                futures.append(executor.submit(process_vpc_metrics, ec2_client, vpc_id, vpc_name))
+                futures.append(executor.submit(process_single_vpc_metrics, ec2_client, vpc_id, vpc_name))
 
         for future in concurrent.futures.as_completed(futures):
             vpcs_info.append(future.result())
 
     return vpcs_info
 
-def process_vpc_metrics(ec2_client, vpc_id, vpc_name):
+def process_single_vpc_metrics(ec2_client, vpc_id, vpc_name):
     """Procesar métricas de una VPC específica"""
     
     # 1. Conectividad de red
@@ -214,10 +217,17 @@ def check_nacls(ec2_client, vpc_id):
         COMENTARIOS.append(f'VPC {vpc_id}: Error verificando NACLs - {e}')
         return 'Error'
 
+
+
 def process_vpc_metrics(REGION, ROLE_ARN, vpc_names=None, all_vpcs=False):
     """Función principal para procesar métricas de VPC"""
-    vpcs_data = get_vpc_status(REGION, vpc_names, all_vpcs, ROLE_ARN)
-    return vpcs_data
+    try:
+        vpcs_data = get_vpc_status(REGION, vpc_names, all_vpcs, ROLE_ARN)
+        return vpcs_data
+    except Exception as e:
+        print(f"Error procesando VPC: {e}")
+        COMENTARIOS.append(f"Error procesando VPC: {e}")
+        return []
 
 def return_vpc_comments():
     """Retorna los comentarios generados durante el procesamiento de VPC"""
