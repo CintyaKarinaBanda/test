@@ -225,12 +225,23 @@ def check_nacls(ec2_client, vpc_id):
 def check_vpn_tunnel_metrics(ec2_client, vpc_id):
     """Verificar métricas de túneles VPN"""
     try:
-        # Obtener conexiones VPN asociadas a la VPC
-        vpn_response = ec2_client.describe_vpn_connections(
-            Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}]
+        # Obtener VPN Gateways asociados a la VPC
+        vgw_response = ec2_client.describe_vpn_gateways(
+            Filters=[{'Name': 'attachment.vpc-id', 'Values': [vpc_id]}]
         )
         
-        if not vpn_response['VpnConnections']:
+        if not vgw_response['VpnGateways']:
+            return ('Sin VPN', 'Sin VPN', 'Sin VPN')
+        
+        # Obtener conexiones VPN para estos VGWs
+        vpn_connections = []
+        for vgw in vgw_response['VpnGateways']:
+            vpn_response = ec2_client.describe_vpn_connections(
+                Filters=[{'Name': 'vpn-gateway-id', 'Values': [vgw['VpnGatewayId']]}]
+            )
+            vpn_connections.extend(vpn_response['VpnConnections'])
+        
+        if not vpn_connections:
             return ('Sin VPN', 'Sin VPN', 'Sin VPN')
         
         # Crear cliente CloudWatch
@@ -246,7 +257,7 @@ def check_vpn_tunnel_metrics(ec2_client, vpc_id):
         tunnel_data_out = 0
         tunnel_state = 0
         
-        for vpn_conn in vpn_response['VpnConnections']:
+        for vpn_conn in vpn_connections:
             vpn_id = vpn_conn['VpnConnectionId']
             
             # Métricas de túnel
