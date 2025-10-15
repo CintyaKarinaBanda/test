@@ -1,0 +1,67 @@
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'funciones'))
+
+import shutil
+import requests
+from datetime import datetime
+
+#Funciones extraidas dentro del mismo proyecto
+from email_manager import send_email
+from bd_manager import send_status
+from excel_manager import write_report, write_column
+from aws_managers import return_comments, process_vpc_metrics, return_vpc_comments
+from config import SOURCE_FILENAME, REGION, ROLE_ARN, API_LINK, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password
+
+def verify_page(url):
+    #Funcion para consultar API
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            return "Todo ok"
+        elif response.status_code == 503:
+            return f"Servicio temporalmente no disponible (503) - Servidor en mantenimiento o sobrecargado"
+        elif response.status_code == 502:
+            return f"Bad Gateway (502) - Error del servidor upstream"
+        elif response.status_code == 504:
+            return f"Gateway Timeout (504) - Servidor no responde"
+        else:
+            return f"Error HTTP {response.status_code}: {response.reason}"
+    except requests.exceptions.Timeout:
+        return f"Timeout: El servidor no respondió en 10 segundos"
+    except requests.exceptions.ConnectionError:
+        return f"Error de conexión: No se pudo conectar al servidor"
+    except requests.exceptions.RequestException as e:
+        return f"Error de solicitud: {e}"
+
+if __name__ == "__main__":
+    print("Script iniciado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    target_filename = f"excel/CheckList_{today}.xlsx"
+    shutil.copy(SOURCE_FILENAME, target_filename)
+
+    # VPC metrics para UPAEP
+    vpc_data = process_vpc_metrics(REGION, ROLE_ARN, vpc_names=['upaep'])
+    write_report(vpc_data, start_row=5, start_col=10, target_filename=target_filename)
+    
+    api_availability = verify_page(API_LINK)
+    write_column([api_availability], start_row=9, start_col=8, target_filename=target_filename)
+
+    #Finalizar el CheckList
+    comentarios = return_comments()
+    comentarios.extend(return_vpc_comments())
+    if not comentarios:
+        comentarios.append('Todo Ok')
+    write_column(comentarios, start_row=17, start_col=2, target_filename=target_filename)
+
+    #Actualizacion en Xoc
+    #send_status(comentarios, CUENTA, PROJECT, host, database, user, password)
+    
+    parametros = {
+        "VPC": ("Conectividad, DNS y seguridad de red", "Funcionando correctamente", "Requiere atención")
+    }
+    #Envio de correo
+    send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, parametros)
+
+    print("Script terminado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))

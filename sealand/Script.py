@@ -3,7 +3,6 @@ import os
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'funciones'))
 
 import shutil
-import requests
 from datetime import datetime
 
 #Funciones extraidas dentro del mismo proyecto
@@ -12,27 +11,6 @@ from bd_manager import send_status
 from excel_manager import write_report, write_column
 from aws_managers import process_rds_metrics, get_rds_event_logs, process_rds_dashboard_metrics, process_lambda_metrics, return_comments
 from config import SOURCE_FILENAME, REGION, RDS_ID, ROLE_ARN, API_LINK, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password
-
-def verify_page(url):
-    #Funcion para consultar API
-    try:
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            return "Todo ok"
-        elif response.status_code == 503:
-            return f"Servicio temporalmente no disponible (503) - Servidor en mantenimiento o sobrecargado"
-        elif response.status_code == 502:
-            return f"Bad Gateway (502) - Error del servidor upstream"
-        elif response.status_code == 504:
-            return f"Gateway Timeout (504) - Servidor no responde"
-        else:
-            return f"Error HTTP {response.status_code}: {response.reason}"
-    except requests.exceptions.Timeout:
-        return f"Timeout: El servidor no respondió en 10 segundos"
-    except requests.exceptions.ConnectionError:
-        return f"Error de conexión: No se pudo conectar al servidor"
-    except requests.exceptions.RequestException as e:
-        return f"Error de solicitud: {e}"
 
 if __name__ == "__main__":
     print("Script iniciado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -68,6 +46,6 @@ if __name__ == "__main__":
 
     }
     #Envio de correo
-    send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, CUENTA, parametros)
+    send_email(target_filename, comentarios, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, parametros)
 
     print("Script terminado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
