@@ -41,12 +41,11 @@ if __name__ == "__main__":
     target_filename = f"excel/CheckList_{today}.xlsx"
     shutil.copy(SOURCE_FILENAME, target_filename)
 
-    # VPC metrics para UPAEP - buscar en todas las VPCs para encontrar datos
-    print("Buscando en todas las VPCs...")
-    vpc_data = process_vpc_metrics(REGION, ROLE_ARN, all_vpcs=True)
-    print(f"VPCs encontradas: {len(vpc_data)}")
+    # VPC metrics para UPAEP
+    vpc_data = process_vpc_metrics(REGION, ROLE_ARN, vpc_names=['upaep'])
+    print(f"VPCs UPAEP encontradas: {len(vpc_data)}")
     for vpc in vpc_data:
-        print(f"VPC: {vpc[0]} ({vpc[1]}) - Datos VPN: DataIn={vpc[6:9] if len(vpc) > 8 else 'N/A'}, DataOut={vpc[9:12] if len(vpc) > 11 else 'N/A'}")
+        print(f"VPC: {vpc[0]} ({vpc[1]}) - VPN DataIn: Max={vpc[7] if len(vpc) > 7 else 'N/A'}MB, DataOut: Max={vpc[10] if len(vpc) > 10 else 'N/A'}MB")
     
     write_report(vpc_data, start_row=5, start_col=2, target_filename=target_filename)
     
