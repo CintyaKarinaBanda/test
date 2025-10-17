@@ -121,19 +121,27 @@ def check_vpn_tunnel_metrics(ec2_client, vpc_id):
             data_out = get_metric_statistics(cw_client, 'AWS/VPN', dimensions, 'TunnelDataOut')
             state = get_metric_statistics(cw_client, 'AWS/VPN', dimensions, 'TunnelState')
             
-            if data_in and any(x != 0 for x in data_in):
-                data_in_metrics.append(tuple(round(x / (1024 * 1024), 2) for x in data_in))
-            if data_out and any(x != 0 for x in data_out):
-                data_out_metrics.append(tuple(round(x / (1024 * 1024), 2) for x in data_out))
+            print(f"VPN {vpn_id}: DataIn={data_in}, DataOut={data_out}, State={state}")
+            
+            if data_in:
+                # Convertir a MB con más precisión (4 decimales)
+                data_in_mb = tuple(round(x / (1024 * 1024), 4) for x in data_in)
+                data_in_metrics.append(data_in_mb)
+                print(f"DataIn MB: {data_in_mb}")
+            if data_out:
+                data_out_mb = tuple(round(x / (1024 * 1024), 4) for x in data_out)
+                data_out_metrics.append(data_out_mb)
+                print(f"DataOut MB: {data_out_mb}")
             if state:
                 state_metrics.append(state)
+                print(f"State: {state}")
         
         # Agregar métricas
         def aggregate(metrics):
             if not metrics:
                 return (0, 0, 0)
             mins, maxs, avgs = zip(*metrics)
-            return (min(mins), max(maxs), sum(avgs)/len(avgs))
+            return (round(min(mins), 4), round(max(maxs), 4), round(sum(avgs)/len(avgs), 4))
         
         final_data_in = aggregate(data_in_metrics)
         final_data_out = aggregate(data_out_metrics)
