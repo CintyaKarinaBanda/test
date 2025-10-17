@@ -57,7 +57,7 @@ if __name__ == "__main__":
     write_column(comentarios, start_row=11, start_col=2, target_filename=target_filename)
 
     #Actualizacion en Xoc
-    #send_status(comentarios, CUENTA, PROJECT, host, database, user, password)
+    send_status(comentarios, CUENTA, PROJECT, host, database, user, password)
     
     parametros = {
         "VPC": ("Conectividad, DNS y seguridad de red", "Funcionando correctamente", "Requiere atención")
