@@ -19,7 +19,7 @@ def send_status(comments, cuenta, project, host, database, user, password):
 
         if comments_texto.strip() == 'Todo Ok':
             status = 'Ok'
-            comments_bd = 'Sin relevantes'
+            comments_bd = 'Sin relevantes operativos'
         else:
             status = 'NoK'
             comments_bd = comments_texto
