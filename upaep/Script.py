@@ -49,15 +49,12 @@ if __name__ == "__main__":
     
     write_report(vpc_data, start_row=5, start_col=2, target_filename=target_filename)
     
-    api_availability = verify_page(API_LINK)
-    write_column([api_availability], start_row=11, start_col=2, target_filename=target_filename)
-
     #Finalizar el CheckList
     comentarios = return_comments()
     comentarios.extend(return_vpc_comments())
     if not comentarios:
         comentarios.append('Todo Ok')
-    write_column(comentarios, start_row=15, start_col=2, target_filename=target_filename)
+    write_column(comentarios, start_row=11, start_col=2, target_filename=target_filename)
 
     #Actualizacion en Xoc
     #send_status(comentarios, CUENTA, PROJECT, host, database, user, password)
