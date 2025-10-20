@@ -39,7 +39,7 @@ if __name__ == "__main__":
         
         # Escribir datos de Twilio en Excel
         twilio_data = [[stats['total'], stats['inbound'], stats['outbound'], tiempo_resp.get('promedio', 0)]]
-        write_column(twilio_data, start_row=10, start_col=3, target_filename=target_filename)
+        write_column([twilio_data], start_row=10, start_col=3, target_filename=target_filename)
         
         if stats['total'] == 0:
             comentarios.append("Sin actividad en Twilio")
