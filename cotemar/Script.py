@@ -7,6 +7,7 @@ from datetime import datetime
 #Funciones extraidas dentro del mismo proyecto
 from email_manager import send_email
 from bd_manager import send_status
+from excel_manager import write_report, write_column
 from twilio_manager import consultar_twilio_messages
 from aws_managers.apigateway import process_apigateway_metrics, return_apigateway_comments
 from config import REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password, API_KEY, API_SECRET, ACCOUNT_SID, REGION, ROLE_ARN
@@ -23,10 +24,7 @@ if __name__ == "__main__":
         stats = resultado_twilio["estadisticas"]
         tiempo_resp = resultado_twilio["tiempo_respuesta"]
         
-        print(f"Mensajes últimas 24h: {stats['total']}")
-        print(f"Inbound: {stats['inbound']} | Outbound: {stats['outbound']}")
-        if tiempo_resp["promedio"]:
-            print(f"Tiempo respuesta promedio: {tiempo_resp['promedio']:.1f}s")
+        write_column([stats,tiempo_resp], start_row=10, start_col=3, target_filename=None)
         
         if stats['total'] == 0:
             comentarios.append("Sin actividad en Twilio")
@@ -41,9 +39,7 @@ if __name__ == "__main__":
         api_comments = return_apigateway_comments()
         
         if api_metrics:
-            print(f"APIs encontradas: {len(api_metrics)}")
-            for api in api_metrics:
-                print(f"API: {api[0]} - Requests: {api[2]}, Latencia: {api[3]}ms")
+            write_report(api_metrics, start_row=5, start_col=2, target_filename=None)
         else:
             comentarios.append("No se encontraron APIs")
             
@@ -53,15 +49,15 @@ if __name__ == "__main__":
         print(f"Error consultando API Gateway: {e}")
         comentarios.append("Error API Gateway")
     
-    status = "Todo Ok" if not comentarios else "Revisar"
     
     #Actualizacion en Xoc
     final_comments = comentarios if comentarios else ["Todo Ok"]
+    write_column(final_comments, start_row=16, start_col=2, target_filename=None)
     send_status(final_comments, CUENTA, PROJECT, host, database, user, password)
     
     parametros = {
-        "Chats": ("Actividad en el chat", "Ok" if status == "Todo Ok" else "Nok", "Nok"),
-        "API Gateway": ("Estado de las APIs", "Ok" if status == "Todo Ok" else "Nok", "Nok")
+        "Chats": ("Actividad en el chat", "Ok", "Nok"),
+        "API Gateway": ("Estado de las APIs", "Ok", "Nok")
     }
     #Envio de correo
     send_email(None, final_comments, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, parametros)
