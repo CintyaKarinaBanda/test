@@ -25,7 +25,10 @@ if __name__ == "__main__":
     
     try:
         # Consulta Twilio
+        print("DEBUG: Iniciando consulta Twilio...")
         resultado_twilio = consultar_twilio_messages(API_KEY, API_SECRET, ACCOUNT_SID)
+        print(f"DEBUG: Resultado Twilio: {resultado_twilio}")
+        
         stats = resultado_twilio["estadisticas"]
         tiempo_resp = resultado_twilio["tiempo_respuesta"]
         
@@ -43,11 +46,16 @@ if __name__ == "__main__":
             
     except Exception as e:
         print(f"Error consultando Twilio: {e}")
+        import traceback
+        traceback.print_exc()
         comentarios.append("Error Twilio")
     
     try:
         # Consulta API Gateway
+        print("DEBUG: Iniciando consulta API Gateway...")
         api_metrics = process_apigateway_metrics(REGION, ROLE_ARN)
+        print(f"DEBUG: API metrics: {api_metrics}")
+        
         api_comments = return_apigateway_comments()
         
         if api_metrics:
@@ -62,6 +70,8 @@ if __name__ == "__main__":
         
     except Exception as e:
         print(f"Error consultando API Gateway: {e}")
+        import traceback
+        traceback.print_exc()
         comentarios.append("Error API Gateway")
     
     
