@@ -11,7 +11,7 @@ from email_manager import send_email
 from bd_manager import send_status
 from excel_manager import write_report, write_column
 from aws_managers import return_comments, process_vpc_metrics, return_vpc_comments
-from config import SOURCE_FILENAME, REGION, ROLE_ARN, API_LINK, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password
+from config import SOURCE_FILENAME, REGION, ROLE_ARN, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password
 
 if __name__ == "__main__":
     print("Script iniciado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
