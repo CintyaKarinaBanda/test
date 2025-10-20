@@ -35,7 +35,9 @@ if __name__ == "__main__":
             print(f"Tiempo respuesta promedio: {tiempo_resp['promedio']:.1f}s")
         
         # Escribir datos de Twilio en Excel
-        twilio_data = [stats['total'], f'Eantrada: {stats['inbound']}, Salida: {stats['outbound']}', tiempo_resp.get('promedio', 0)]
+        inbound = stats['inbound']
+        outbound = stats['outbound']
+        twilio_data = [stats['total'], f'Entrada: {inbound}, Salida: {outbound}', tiempo_resp.get('promedio', 0)]
         write_column(twilio_data, start_row=10, start_col=3, target_filename=target_filename)
         
         if stats['total'] == 0:
