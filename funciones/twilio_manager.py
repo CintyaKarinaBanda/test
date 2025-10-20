@@ -9,31 +9,39 @@ def create_client(API_KEY, API_SECRET, ACCOUNT_SID):
         raise Exception(f"Error creando cliente Twilio: {e}")
 
 def obtener_mensajes(client, periodo=24, limite=1000):
-    try:
-        since = datetime.now(timezone.utc) - timedelta(hours=periodo)
-        
-        # Usar filtros de fecha de Twilio directamente
-        msgs = client.messages.list(
-            date_sent_after=since,
-            limit=limite
-        )
-        
-        messages = []
-        for m in msgs:
-            dt = m.date_sent or m.date_created
-            if dt:
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                messages.append({
-                    "sid": m.sid,
-                    "from": str(m.from_),
-                    "to": str(m.to),
-                    "direction": m.direction,
-                    "date": dt,
-                })
-        return messages
-    except Exception as e:
-        raise Exception(f"Error obteniendo mensajes: {e}")
+    import time
+    max_retries = 3
+    
+    for attempt in range(max_retries):
+        try:
+            since = datetime.now(timezone.utc) - timedelta(hours=periodo)
+            
+            # Usar filtros de fecha de Twilio directamente
+            msgs = client.messages.list(
+                date_sent_after=since,
+                limit=limite
+            )
+            
+            messages = []
+            for m in msgs:
+                dt = m.date_sent or m.date_created
+                if dt:
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    messages.append({
+                        "sid": m.sid,
+                        "from": str(m.from_),
+                        "to": str(m.to),
+                        "direction": m.direction,
+                        "date": dt,
+                    })
+            return messages
+        except Exception as e:
+            if "503" in str(e) and attempt < max_retries - 1:
+                print(f"Twilio 503 error, reintentando en 5 segundos... (intento {attempt + 1}/{max_retries})")
+                time.sleep(5)
+                continue
+            raise Exception(f"Error obteniendo mensajes: {e}")
 
 def calcular_estadisticas(messages):
     total = len(messages)
