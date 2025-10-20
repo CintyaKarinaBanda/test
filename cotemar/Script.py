@@ -2,6 +2,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'funciones'))
 
+import shutil
 from datetime import datetime
 
 #Funciones extraidas dentro del mismo proyecto
@@ -10,11 +11,15 @@ from bd_manager import send_status
 from excel_manager import write_report, write_column
 from twilio_manager import consultar_twilio_messages
 from aws_managers.apigateway import process_apigateway_metrics, return_apigateway_comments
-from config import REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password, API_KEY, API_SECRET, ACCOUNT_SID, REGION, ROLE_ARN
+from config import SOURCE_FILENAME, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password, API_KEY, API_SECRET, ACCOUNT_SID, REGION, ROLE_ARN
 
 
 if __name__ == "__main__":
     print("Script iniciado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    
+    today = datetime.now().strftime("%Y-%m-%d")
+    target_filename = f"excel/CheckList_{today}.xlsx"
+    shutil.copy(SOURCE_FILENAME, target_filename)
     
     comentarios = []
     
@@ -24,7 +29,14 @@ if __name__ == "__main__":
         stats = resultado_twilio["estadisticas"]
         tiempo_resp = resultado_twilio["tiempo_respuesta"]
         
-        write_column([stats,tiempo_resp], start_row=10, start_col=3, target_filename=None)
+        print(f"Mensajes últimas 24h: {stats['total']}")
+        print(f"Inbound: {stats['inbound']} | Outbound: {stats['outbound']}")
+        if tiempo_resp["promedio"]:
+            print(f"Tiempo respuesta promedio: {tiempo_resp['promedio']:.1f}s")
+        
+        # Escribir datos de Twilio en Excel
+        twilio_data = [[stats['total'], stats['inbound'], stats['outbound'], tiempo_resp.get('promedio', 0)]]
+        write_report(twilio_data, start_row=5, start_col=2, target_filename=target_filename)
         
         if stats['total'] == 0:
             comentarios.append("Sin actividad en Twilio")
@@ -39,7 +51,10 @@ if __name__ == "__main__":
         api_comments = return_apigateway_comments()
         
         if api_metrics:
-            write_report(api_metrics, start_row=5, start_col=2, target_filename=None)
+            print(f"APIs encontradas: {len(api_metrics)}")
+            for api in api_metrics:
+                print(f"API: {api[0]} - Requests: {api[2]}, Latencia: {api[3]}ms")
+            write_report(api_metrics, start_row=10, start_col=2, target_filename=target_filename)
         else:
             comentarios.append("No se encontraron APIs")
             
@@ -50,9 +65,11 @@ if __name__ == "__main__":
         comentarios.append("Error API Gateway")
     
     
-    #Actualizacion en Xoc
+    #Finalizar el CheckList
     final_comments = comentarios if comentarios else ["Todo Ok"]
-    write_column(final_comments, start_row=16, start_col=2, target_filename=None)
+    write_column(final_comments, start_row=16, start_col=2, target_filename=target_filename)
+    
+    #Actualizacion en Xoc
     send_status(final_comments, CUENTA, PROJECT, host, database, user, password)
     
     parametros = {
@@ -60,6 +77,6 @@ if __name__ == "__main__":
         "API Gateway": ("Estado de las APIs", "Ok", "Nok")
     }
     #Envio de correo
-    send_email(None, final_comments, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, parametros)
+    send_email(target_filename, final_comments, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, parametros)
 
     print("Script terminado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
