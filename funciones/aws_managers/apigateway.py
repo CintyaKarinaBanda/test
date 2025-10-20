@@ -11,14 +11,11 @@ def process_apigateway_metrics(region, role_arn):
     try:
         # Obtener todas las APIs
         apis = apigateway_client.get_rest_apis()['items']
-        print(f"DEBUG: APIs encontradas: {[api['name'] for api in apis]}")
         
         api_metrics = []
         for api in apis:
             api_name = api['name']
             api_id = api['id']
-            
-            print(f"DEBUG: Procesando API: {api_name} (ID: {api_id})")
             
             # Probar diferentes dimensiones para API Gateway
             dimensions_options = [
@@ -40,8 +37,6 @@ def process_apigateway_metrics(region, role_arn):
                     error_4xx_stats = get_metric_statistics(cw_client, 'AWS/ApiGateway', dimensions, '4XXError')
                     error_5xx_stats = get_metric_statistics(cw_client, 'AWS/ApiGateway', dimensions, '5XXError')
                     
-                    print(f"DEBUG: Dimensiones {dimensions} - Count: {count_stats}, Latency: {latency_stats}, 4XX: {error_4xx_stats}, 5XX: {error_5xx_stats}")
-                    
                     # Usar las mejores métricas encontradas
                     if count_stats and sum(count_stats) > sum(best_count):
                         best_count = count_stats
@@ -52,8 +47,7 @@ def process_apigateway_metrics(region, role_arn):
                     if error_5xx_stats and sum(error_5xx_stats) > sum(best_5xx):
                         best_5xx = error_5xx_stats
                         
-                except Exception as e:
-                    print(f"DEBUG: Error con dimensiones {dimensions}: {e}")
+                except:
                     continue
             
             api_metrics.append([
@@ -76,8 +70,6 @@ def process_apigateway_metrics(region, role_arn):
         
     except Exception as e:
         print(f"Error procesando métricas de API Gateway: {e}")
-        import traceback
-        traceback.print_exc()
         return []
 
 def return_apigateway_comments():
