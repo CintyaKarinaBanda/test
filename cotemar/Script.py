@@ -36,7 +36,7 @@ if __name__ == "__main__":
         
         # Escribir datos de Twilio en Excel
         twilio_data = [stats['total'], stats['inbound'], stats['outbound'], tiempo_resp.get('promedio', 0)]
-        write_column(twilio_data, start_row=5, start_col=2, target_filename=target_filename)
+        write_column(twilio_data, start_row=10, start_col=3, target_filename=target_filename)
         
         if stats['total'] == 0:
             comentarios.append("Sin actividad en Twilio")
@@ -53,7 +53,7 @@ if __name__ == "__main__":
             print(f"APIs encontradas: {len(api_metrics)}")
             for api in api_metrics:
                 print(f"API: {api[0]} - Requests: {api[3]}, Latencia: {api[6]}ms")
-            write_report(api_metrics, start_row=10, start_col=2, target_filename=target_filename)
+            write_report(api_metrics, start_row=5, start_col=2, target_filename=target_filename)
         else:
             comentarios.append("No se encontraron APIs")
             
