@@ -9,7 +9,7 @@ from datetime import datetime
 from email_manager import send_email
 from bd_manager import send_status
 from excel_manager import write_report, write_column
-from api_maganer import verify_page
+from api_manager import verify_page
 from aws_managers import process_rds_metrics, get_rds_event_logs, process_lambda_metrics, return_comments
 from config import SOURCE_FILENAME, REGION, RDS_ID, ROLE_ARN, API_LINK, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password
 
