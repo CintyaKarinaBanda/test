@@ -38,8 +38,8 @@ if __name__ == "__main__":
             print(f"Tiempo respuesta promedio: {tiempo_resp['promedio']:.1f}s")
         
         # Escribir datos de Twilio en Excel
-        twilio_data = [[stats['total'], stats['inbound'], stats['outbound'], tiempo_resp.get('promedio', 0)]]
-        write_column([twilio_data], start_row=10, start_col=3, target_filename=target_filename)
+        twilio_data = [stats['total'], stats['inbound'], stats['outbound'], tiempo_resp.get('promedio', 0)]
+        write_column(twilio_data, start_row=10, start_col=3, target_filename=target_filename)
         
         if stats['total'] == 0:
             comentarios.append("Sin actividad en Twilio")
@@ -62,7 +62,11 @@ if __name__ == "__main__":
             print(f"APIs encontradas: {len(api_metrics)}")
             for api in api_metrics:
                 print(f"API: {api[0]} - Count Avg: {api[3]}, Latencia Avg: {api[6]}ms, 4XX: {api[9]}, 5XX: {api[12]}")
+            
+            print(f"DEBUG: Intentando escribir en Excel - start_row=5, start_col=2")
+            print(f"DEBUG: Datos a escribir: {api_metrics}")
             write_report(api_metrics, start_row=5, start_col=2, target_filename=target_filename)
+            print("DEBUG: Escritura de API Gateway completada")
         else:
             comentarios.append("No se encontraron APIs")
             

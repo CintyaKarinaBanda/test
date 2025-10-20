@@ -5,9 +5,17 @@ def write_report(data, start_row=1, start_col=1, target_filename="CheckList.xlsx
     wb = load_workbook(target_filename)
     ws = wb.active
 
+    print(f"DEBUG write_report: Escribiendo {len(data)} filas desde fila {start_row}, columna {start_col}")
+    
     for i, row_data in enumerate(data, start=start_row):
+        print(f"DEBUG: Escribiendo fila {i} con {len(row_data)} valores")
         for j, value in enumerate(row_data, start=start_col):
-            ws.cell(row=i, column=j, value=value)
+            try:
+                print(f"DEBUG: Celda ({i},{j}) = {value}")
+                ws.cell(row=i, column=j, value=value)
+            except Exception as e:
+                print(f"ERROR: No se pudo escribir en celda ({i},{j}): {e}")
+                continue
 
     wb.save(target_filename)
     print(f"Reporte guardado como: {target_filename}")
