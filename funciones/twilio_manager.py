@@ -11,15 +11,26 @@ def create_client(API_KEY, API_SECRET, ACCOUNT_SID):
 def obtener_mensajes(client, periodo=24, limite=1000):
     try:
         since = datetime.now(timezone.utc) - timedelta(hours=periodo)
+        print(f"Buscando mensajes desde: {since}")
+        
+        msgs = client.messages.list(limit=limite)
+        print(f"Total mensajes obtenidos de Twilio: {len(list(msgs))}")
+        
+        # Volver a obtener la lista ya que se consumió en el print anterior
         msgs = client.messages.list(limit=limite)
         
         messages = []
+        total_msgs = 0
         for m in msgs:
+            total_msgs += 1
             dt = m.date_sent or m.date_created
             if not dt:
                 continue
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
+            
+            print(f"Mensaje {total_msgs}: Fecha={dt}, Desde={since}, En rango={dt >= since}")
+            
             if dt >= since:
                 messages.append({
                     "sid": m.sid,
@@ -28,6 +39,8 @@ def obtener_mensajes(client, periodo=24, limite=1000):
                     "direction": m.direction,
                     "date": dt,
                 })
+        
+        print(f"Mensajes en el período de {periodo}h: {len(messages)} de {total_msgs} total")
         return messages
     except Exception as e:
         raise Exception(f"Error obteniendo mensajes: {e}")

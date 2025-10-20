@@ -53,8 +53,8 @@ if __name__ == "__main__":
         if api_metrics:
             print(f"APIs encontradas: {len(api_metrics)}")
             for api in api_metrics:
-                print(f"API: {api[0]} - Requests: {api[2]}, Latencia: {api[3]}ms")
-            write_report(api_metrics, start_row=10, start_col=2, target_filename=target_filename)
+                print(f"API: {api[0]} - Count Avg: {api[3]}, Latencia Avg: {api[6]}ms")
+            write_report(api_metrics, start_row=10, start_col=1, target_filename=target_filename)
         else:
             comentarios.append("No se encontraron APIs")
             

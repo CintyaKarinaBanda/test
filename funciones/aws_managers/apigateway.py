@@ -15,27 +15,28 @@ def process_apigateway_metrics(region, role_arn):
         api_metrics = []
         for api in apis:
             api_name = api['name']
-            api_id = api['id']
             
             # Dimensiones para API Gateway
             dimensions = [
                 {'Name': 'ApiName', 'Value': api_name}
             ]
             
-            # Métricas principales de API Gateway
-            count = get_metric_statistics(cw_client, 'AWS/ApiGateway', dimensions, 'Count', ['Sum'])
-            latency = get_metric_statistics(cw_client, 'AWS/ApiGateway', dimensions, 'Latency', ['Average', 'Maximum'])
-            error_4xx = get_metric_statistics(cw_client, 'AWS/ApiGateway', dimensions, '4XXError', ['Sum'])
-            error_5xx = get_metric_statistics(cw_client, 'AWS/ApiGateway', dimensions, '5XXError', ['Sum'])
+            # Obtener métricas con min, max, avg usando utils.py
+            count_stats = get_metric_statistics(cw_client, 'AWS/ApiGateway', dimensions, 'Count')
+            latency_stats = get_metric_statistics(cw_client, 'AWS/ApiGateway', dimensions, 'Latency')
+            error_4xx_stats = get_metric_statistics(cw_client, 'AWS/ApiGateway', dimensions, '4XXError')
             
             api_metrics.append([
                 api_name,
-                api_id,
-                count[0] if count else 0,
-                latency[0] if latency else 0,  # Average latency
-                latency[1] if len(latency) > 1 else 0,  # Max latency
-                error_4xx[0] if error_4xx else 0,
-                error_5xx[0] if error_5xx else 0
+                count_stats[0] if count_stats else 0,    # Count Min
+                count_stats[1] if len(count_stats) > 1 else 0,    # Count Max
+                count_stats[2] if len(count_stats) > 2 else 0,    # Count Avg
+                latency_stats[0] if latency_stats else 0,  # Latency Min
+                latency_stats[1] if len(latency_stats) > 1 else 0,  # Latency Max
+                latency_stats[2] if len(latency_stats) > 2 else 0,  # Latency Avg
+                error_4xx_stats[0] if error_4xx_stats else 0,  # 4XX Min
+                error_4xx_stats[1] if len(error_4xx_stats) > 1 else 0,  # 4XX Max
+                error_4xx_stats[2] if len(error_4xx_stats) > 2 else 0   # 4XX Avg
             ])
         
         return api_metrics
