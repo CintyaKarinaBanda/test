@@ -49,8 +49,8 @@ def process_lambda_metrics(REGION, role_arn=None, account_name='Default'):
             invocations = get_metric_statistics(cw_client, 'AWS/Lambda', [{'Name': 'FunctionName', 'Value': function_name}], 'Invocations', ['Sum'])
             
             # Alertas
-            if errors[0] > 0:
-                add_comment(f'Lambda {function_name}: Se detectaron {errors[0]} errores')
+            #if errors[0] > 0:
+            #    add_comment(f'Lambda {function_name}: Se detectaron {errors[0]} errores')
             
             lambda_data.append((function_name, duration[0], errors[0], invocations[0]))
             

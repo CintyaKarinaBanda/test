@@ -10,7 +10,7 @@ from email_manager import send_email
 from bd_manager import send_status
 from excel_manager import write_report, write_column
 from twilio_manager import consultar_twilio_messages
-from aws_managers.apigateway import process_apigateway_metrics, return_apigateway_comments
+from aws_managers.apigateway import process_apigateway_metrics
 from config import SOURCE_FILENAME, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password, API_KEY, API_SECRET, ACCOUNT_SID, REGION, ROLE_ARN
 
 
