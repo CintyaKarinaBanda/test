@@ -13,7 +13,7 @@ from config import REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUE
 if __name__ == "__main__":
     print("Script iniciado, ",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     monthList = [5, 6, 7]
-    if (datetime.now().month() not in monthList):
+    if (datetime.now().month not in monthList):
         #Actualizacion en Xoc
         send_status(["Todo Ok"], CUENTA, PROJECT, host, database, user, password)
         #Actualizacion en Xoc
