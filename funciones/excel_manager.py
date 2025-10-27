@@ -7,13 +7,16 @@ def write_report(data, start_row=1, start_col=1, target_filename="CheckList.xlsx
 
     for i, row_data in enumerate(data, start=start_row):
         for j, value in enumerate(row_data, start=start_col):
-            ws.cell(row=i, column=j, value=value)
+            try:
+                ws.cell(row=i, column=j, value=value)
+            except:
+                continue
 
     wb.save(target_filename)
     print(f"Reporte guardado como: {target_filename}")
 
 #Funcion para escribir en una sola columna
-def write_comments(comments, start_row=1, start_col=1, target_filename="CheckList.xlsx"):
+def write_column(comments, start_row=1, start_col=1, target_filename="CheckList.xlsx"):
     wb = load_workbook(target_filename)
     ws = wb.active
 

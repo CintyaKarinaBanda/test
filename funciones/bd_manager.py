@@ -1,17 +1,17 @@
 import psycopg2
 from datetime import date
 
-def send_status(comments, cuenta, project):
+def send_status(comments, cuenta, project, host, database, user, password):
     comments_texto = '\n'.join(comments) if isinstance(comments, list) else comments
     status = ''
     comments_bd = ''
 
     try:
         conn = psycopg2.connect(
-            host="3.239.166.161",
-            database="xoc",
-            user="xoc_user",
-            password="xoc_user!"
+            host=host,
+            database=database,
+            user=user,
+            password=password
         )
         cursor = conn.cursor()
 
@@ -19,7 +19,7 @@ def send_status(comments, cuenta, project):
 
         if comments_texto.strip() == 'Todo Ok':
             status = 'Ok'
-            comments_bd = 'Sin relevantes'
+            comments_bd = 'Sin relevantes operativos'
         else:
             status = 'NoK'
             comments_bd = comments_texto

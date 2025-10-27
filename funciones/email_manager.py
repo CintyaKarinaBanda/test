@@ -1,15 +1,9 @@
 import yagmail
 
 #Funcion para envio del correo
-def send_email(archivo_adjunto, comentarios, remitente, password, destinatario, copias, cuenta):
+def send_email(archivo_adjunto, comentarios, remitente, password, destinatario, copias, cuenta, parametros):
     #Diseño del correo
-    comentarios_texto = '\n'.join(comentarios)
-
-    parametros = {
-        "Status Check": ("Estado de instancia, sistema y volumen", "Ok", "NoK"),
-        "CPU Utilization": ("Menor al 85% en instancias y RDS", "Ok", "NoK"),
-        "Snapshot": ("Respaldo de RDS del día anterior", "Completado", "Incompleto")
-    }
+    comentarios_texto = '\n'.join(comentarios) if isinstance(comentarios, list) else comentarios
 
     message = f"Buenos días, \n\nAdjunto el informe de monitoreo diario (checklist) del sistema. Los resultados de la revisión "
     if comentarios_texto == 'Todo Ok':
@@ -19,7 +13,7 @@ def send_email(archivo_adjunto, comentarios, remitente, password, destinatario, 
 
     message += "\nParámetros evaluados:\n"
     for parametro, (descripcion, estado_ok, estado_nok) in parametros.items():
-        message += f"\t•⁠ {parametro}: {descripcion} - "
+        message += f"\t• {parametro}: {descripcion} - "
         if parametro in comentarios_texto:
             message += f"{estado_nok}\n"
         else:
@@ -30,7 +24,7 @@ def send_email(archivo_adjunto, comentarios, remitente, password, destinatario, 
         message += "\nEstado general: Todo en orden\n"
     else:
         subject = f"Checklist Diario {cuenta} - Status: ❌"
-        message += "\nEstado general: Se recomeinda una revisión\n"
+        message += "\nEstado general: Se recomienda una revisión\n"
 
     message += "\nEste es un mensaje automático. \n"
     message += "Por favor, no responda a este correo.\n\n"
