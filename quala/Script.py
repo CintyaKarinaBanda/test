@@ -36,16 +36,16 @@ if __name__ == "__main__":
     try:
         # Monitoreo RDS - Primera instancia
         rds_data_1 = process_rds_metrics(RDS_IDS[0], REGION, ROLE_ARN, 'Quala')
-        write_report([rds_data_1], start_row=10, start_col=2, target_filename=target_filename)
+        write_report([rds_data_1], start_row=19, start_col=2, target_filename=target_filename)
         
         # Monitoreo RDS - Segunda instancia
         rds_data_2 = process_rds_metrics(RDS_IDS[1], REGION, ROLE_ARN, 'Quala')
-        write_report([rds_data_2], start_row=11, start_col=2, target_filename=target_filename)
+        write_report([rds_data_2], start_row=20, start_col=2, target_filename=target_filename)
         
         # Eventos RDS
         rds_events_1 = get_rds_event_logs(RDS_IDS[0], REGION, ROLE_ARN)
         rds_events_2 = get_rds_event_logs(RDS_IDS[1], REGION, ROLE_ARN)
-        write_column([rds_events_1, rds_events_2], start_row=15, start_col=2, target_filename=target_filename)
+        write_column([rds_events_1, rds_events_2], start_row=24, start_col=2, target_filename=target_filename)
         
     except Exception as e:
         print(f"Error consultando RDS: {e}")
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     try:
         # Verificación de API
         api_availability = verify_page(API_LINK)
-        write_column([api_availability], start_row=18, start_col=2, target_filename=target_filename)
+        write_column([api_availability], start_row=24, start_col=8, target_filename=target_filename)
         
         if "Todo ok" not in api_availability:
             comentarios.append("Error en API")
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     comentarios.extend(return_comments())
     comentarios.extend(return_ec2_comments())
     final_comments = comentarios if comentarios else ["Todo Ok"]
-    write_column(final_comments, start_row=20, start_col=2, target_filename=target_filename)
+    write_column(final_comments, start_row=17, start_col=15, target_filename=target_filename)
     
     #Actualizacion en Xoc
     for project in PROJECT:
