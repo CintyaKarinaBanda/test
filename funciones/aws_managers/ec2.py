@@ -9,7 +9,7 @@ def return_ec2_comments():
 COMENTARIOS = []
 
 #Inicio del Proceso para las Instancias
-def get_instance_status(REGION, include_names=None, exclude_names=None, all_instances=False, ROLE_ARN=None):
+def get_instance_status(REGION, include_names=None, exclude_names=None, all_instances=False, ROLE_ARN=None, account_name='Default'):
     #Función para trabajar simultaneamente
     if ROLE_ARN:
         session = assume_role(ROLE_ARN, REGION)
@@ -44,14 +44,14 @@ def get_instance_status(REGION, include_names=None, exclude_names=None, all_inst
                     state = instance['State']['Name']
                     if state == "running":
                         instance_id = instance['InstanceId']
-                        futures.append(executor.submit(process_instance_metrics, cw_client, ec2_client, instance_id, name, include_names or []))
+                        futures.append(executor.submit(process_instance_metrics, cw_client, ec2_client, instance_id, name, account_name))
 
         for future in concurrent.futures.as_completed(futures):
             instances_info.append(future.result())
 
     return instances_info
 
-def process_ec2_metrics(REGION, ROLE_ARN, include_names=None, exclude_names=None, all_instances=False):
+def process_ec2_metrics(REGION, ROLE_ARN, include_names=None, exclude_names=None, all_instances=False, account_name='Default'):
     """Función principal para procesar métricas de EC2
     
     Args:
@@ -60,30 +60,51 @@ def process_ec2_metrics(REGION, ROLE_ARN, include_names=None, exclude_names=None
         include_names: Lista de palabras que deben estar en el nombre de la instancia
         exclude_names: Lista de palabras que NO deben estar en el nombre de la instancia
         all_instances: Si True, incluye todas las instancias (ignora include_names)
+        account_name: Nombre de la cuenta para configuración personalizada
     """
-    instances_data = get_instance_status(REGION, include_names, exclude_names, all_instances, ROLE_ARN)
+    instances_data = get_instance_status(REGION, include_names, exclude_names, all_instances, ROLE_ARN, account_name)
     return instances_data
 
-def process_instance_metrics(cw_client, ec2_client, instance_id, name, ACOUNT_NAME):
-    #Funcion para ordenar los datos
+def process_instance_metrics(cw_client, ec2_client, instance_id, name, account_name='Default'):
+    # Obtener configuración por cuenta
+    try:
+        from .config import get_account_config
+        config = get_account_config(account_name)
+    except ImportError:
+        # Configuración por defecto si falla el import
+        config = {
+            'ec2_metrics': ['CPUUtilization', 'NetworkIn', 'NetworkOut'],
+            'alerts': {
+                'cpu_alert': True,
+                'cpu_threshold': 85,
+                'cpu_position': 1  # 0=min, 1=max, 2=avg
+            }
+        }
+    
+    # Status checks
     instance_status, system_status = get_status_checks(ec2_client, instance_id)
     if (instance_status != 'ok' and instance_status != 'initializing') or (system_status != 'ok' and system_status != 'initializing'):
         COMENTARIOS.append('Status Check: Uno de los dos check para las instancias no esta bien')
 
-    instance_metrics = [
-        ('CPUUtilization', 'AWS/EC2', [{'Name': 'InstanceId', 'Value': instance_id}]),
-        ('NetworkIn', 'AWS/EC2', [{'Name': 'InstanceId', 'Value': instance_id}]),
-        ('NetworkOut', 'AWS/EC2', [{'Name': 'InstanceId', 'Value': instance_id}]),
-    ]
+    # Métricas dinámicas basadas en configuración
+    instance_metrics = [(metric, 'AWS/EC2', [{'Name': 'InstanceId', 'Value': instance_id}]) 
+                       for metric in config.get('ec2_metrics', ['CPUUtilization', 'NetworkIn', 'NetworkOut'])]
 
     instance_metrics_data = []
+    alerts = config.get('alerts', {})
+    
     for metric_name, namespace, dimensions in instance_metrics:
         metric_data = get_metric_statistics(cw_client, namespace, dimensions, metric_name)
         instance_metrics_data.extend(metric_data)
-        position = 2 if 'darrow' in ACOUNT_NAME else 1
-        porcentaje = 70 if 'darrow' in ACOUNT_NAME else 85
-        if metric_name == 'CPUUtilization' and len(metric_data) > 1 and metric_data[position] >= porcentaje:
-            COMENTARIOS.append(f'CPU Utilization: el procentaje es mayor a {porcentaje} en la instancia {instance_id}')
+        
+        # Alerta de CPU configurable
+        if (metric_name == 'CPUUtilization' and alerts.get('cpu_alert', True) and len(metric_data) > 1):
+            position = alerts.get('cpu_position', 1)
+            threshold = alerts.get('cpu_threshold', 85)
+            cpu_value = metric_data[position] if position < len(metric_data) else metric_data[1]
+            
+            if cpu_value >= threshold:
+                COMENTARIOS.append(f'CPU Utilization: el porcentaje es {cpu_value}% (mayor a {threshold}%) en la instancia {instance_id}')
 
     response = ec2_client.describe_volumes(Filters=[{'Name': 'attachment.instance-id', 'Values': [instance_id]}])
     volume_id = None
