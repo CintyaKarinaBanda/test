@@ -10,7 +10,9 @@ from email_manager import send_email
 from bd_manager import send_status
 from excel_manager import write_report, write_column
 from api_manager import verify_page
-from config import SOURCE_FILENAME, REGION, API_LINK, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password
+from aws_managers import process_rds_metrics, get_rds_event_logs, return_comments
+from aws_managers.ec2 import process_ec2_metrics, return_ec2_comments
+from config import SOURCE_FILENAME, REGION, ROLE_ARN, API_LINK, RDS_IDS, REMITENTE, GMAIL_PASSWORD, DESTINATARIO, COPIAS, SUBJECT, CUENTA, PROJECT, host, database, user, password
 
 
 if __name__ == "__main__":
@@ -23,9 +25,36 @@ if __name__ == "__main__":
     comentarios = []
     
     try:
+        # Monitoreo EC2
+        ec2_data = process_ec2_metrics(REGION, ROLE_ARN, include_names=['quala'])
+        write_report(ec2_data, start_row=5, start_col=2, target_filename=target_filename)
+        
+    except Exception as e:
+        print(f"Error consultando EC2: {e}")
+        comentarios.append("Error EC2")
+    
+    try:
+        # Monitoreo RDS - Primera instancia
+        rds_data_1 = process_rds_metrics(RDS_IDS[0], REGION, ROLE_ARN, 'Quala')
+        write_report([rds_data_1], start_row=10, start_col=2, target_filename=target_filename)
+        
+        # Monitoreo RDS - Segunda instancia
+        rds_data_2 = process_rds_metrics(RDS_IDS[1], REGION, ROLE_ARN, 'Quala')
+        write_report([rds_data_2], start_row=11, start_col=2, target_filename=target_filename)
+        
+        # Eventos RDS
+        rds_events_1 = get_rds_event_logs(RDS_IDS[0], REGION, ROLE_ARN)
+        rds_events_2 = get_rds_event_logs(RDS_IDS[1], REGION, ROLE_ARN)
+        write_column([rds_events_1, rds_events_2], start_row=15, start_col=2, target_filename=target_filename)
+        
+    except Exception as e:
+        print(f"Error consultando RDS: {e}")
+        comentarios.append("Error RDS")
+    
+    try:
         # Verificación de API
         api_availability = verify_page(API_LINK)
-        write_column([api_availability], start_row=5, start_col=2, target_filename=target_filename)
+        write_column([api_availability], start_row=18, start_col=2, target_filename=target_filename)
         
         if "Todo ok" not in api_availability:
             comentarios.append("Error en API")
@@ -35,14 +64,18 @@ if __name__ == "__main__":
         comentarios.append("Error API")
     
     #Finalizar el CheckList
+    comentarios.extend(return_comments())
+    comentarios.extend(return_ec2_comments())
     final_comments = comentarios if comentarios else ["Todo Ok"]
-    write_column(final_comments, start_row=10, start_col=2, target_filename=target_filename)
+    write_column(final_comments, start_row=20, start_col=2, target_filename=target_filename)
     
     #Actualizacion en Xoc
     for project in PROJECT:
         send_status(final_comments, CUENTA, project, host, database, user, password)
     
     parametros = {
+        "Status Check": ("Estado de instancias EC2", "Ok", "NoK"),
+        "CPU Utilization": ("Menor al 85% en RDS", "Ok", "NoK"),
         "API": ("Disponibilidad de la API", "Ok", "Nok")
     }
     #Envio de correo
