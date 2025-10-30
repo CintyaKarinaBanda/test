@@ -2,6 +2,11 @@ import boto3
 import concurrent.futures
 from .utils import assume_role, get_metric_statistics
 
+# Importar función para agregar comentarios globales
+def add_comment(comment):
+    from . import GLOBAL_COMMENTS
+    GLOBAL_COMMENTS.append(comment)
+
 def return_ec2_comments():
     """Retorna los comentarios generados durante el procesamiento de EC2"""
     return COMENTARIOS.copy()
@@ -77,14 +82,15 @@ def process_instance_metrics(cw_client, ec2_client, instance_id, name, account_n
             'alerts': {
                 'cpu_alert': True,
                 'cpu_threshold': 85,
-                'cpu_position': 1  # 0=min, 1=max, 2=avg
+                'cpu_max_ignore': 100,  # Valor máximo a ignorar (para auto scaling)
+                'cpu_position': 2  # 0=min, 1=max, 2=avg (usar avg por defecto)
             }
         }
     
     # Status checks
     instance_status, system_status = get_status_checks(ec2_client, instance_id)
     if (instance_status != 'ok' and instance_status != 'initializing') or (system_status != 'ok' and system_status != 'initializing'):
-        COMENTARIOS.append('Status Check: Uno de los dos check para las instancias no esta bien')
+        add_comment('Status Check: Uno de los dos check para las instancias no esta bien')
 
     # Métricas dinámicas basadas en configuración
     instance_metrics = [(metric, 'AWS/EC2', [{'Name': 'InstanceId', 'Value': instance_id}]) 
@@ -97,14 +103,17 @@ def process_instance_metrics(cw_client, ec2_client, instance_id, name, account_n
         metric_data = get_metric_statistics(cw_client, namespace, dimensions, metric_name)
         instance_metrics_data.extend(metric_data)
         
-        # Alerta de CPU configurable
+        # Alerta de CPU configurable (similar a RDS)
         if (metric_name == 'CPUUtilization' and alerts.get('cpu_alert', True) and len(metric_data) > 1):
-            position = alerts.get('cpu_position', 1)
+            position = alerts.get('cpu_position', 2)  # Por defecto usar avg
             threshold = alerts.get('cpu_threshold', 85)
-            cpu_value = metric_data[position] if position < len(metric_data) else metric_data[1]
+            cpu_max_ignore = alerts.get('cpu_max_ignore', 100)
+            cpu_value = metric_data[position] if position < len(metric_data) else metric_data[2]
             
-            if cpu_value >= threshold:
-                COMENTARIOS.append(f'CPU Utilization: el porcentaje es {cpu_value}% (mayor a {threshold}%) en la instancia {instance_id}')
+            # Solo alertar si está por encima del threshold pero por debajo del límite de ignorar
+            if (cpu_value >= threshold and cpu_value < cpu_max_ignore):
+                metric_type = ['mínimo', 'máximo', 'promedio'][position] if position < 3 else 'promedio'
+                add_comment(f'CPU Utilization: el {metric_type} es {cpu_value}% (mayor a {threshold}%) en la instancia {instance_id}')
 
     response = ec2_client.describe_volumes(Filters=[{'Name': 'attachment.instance-id', 'Values': [instance_id]}])
     volume_id = None
@@ -119,7 +128,7 @@ def process_instance_metrics(cw_client, ec2_client, instance_id, name, account_n
             if status_response.get('VolumeStatuses'):
                 volume_status = status_response['VolumeStatuses'][0].get('VolumeStatus', {}).get('Status', 'Unknown')
                 if volume_status != 'ok':
-                    COMENTARIOS.append('Status Check: El check para el volumen de la instancia no esta bien')
+                    add_comment('Status Check: El check para el volumen de la instancia no esta bien')
 
 
     volume_metrics = [
