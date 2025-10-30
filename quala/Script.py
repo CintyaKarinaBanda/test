@@ -42,11 +42,6 @@ if __name__ == "__main__":
         rds_data_2 = process_rds_metrics(RDS_IDS[1], REGION, ROLE_ARN, 'Quala')
         write_report([rds_data_2], start_row=20, start_col=2, target_filename=target_filename)
         
-        # Eventos RDS
-        rds_events_1 = get_rds_event_logs(RDS_IDS[0], REGION, ROLE_ARN)
-        rds_events_2 = get_rds_event_logs(RDS_IDS[1], REGION, ROLE_ARN)
-        write_column([rds_events_1, rds_events_2], start_row=24, start_col=2, target_filename=target_filename)
-        
     except Exception as e:
         print(f"Error consultando RDS: {e}")
         comentarios.append("Error RDS")
@@ -54,7 +49,7 @@ if __name__ == "__main__":
     try:
         # Verificación de API
         api_availability = verify_page(API_LINK)
-        write_column([api_availability], start_row=24, start_col=8, target_filename=target_filename)
+        write_column([api_availability], start_row=24, start_col=2, target_filename=target_filename)
         
         if "Todo ok" not in api_availability:
             comentarios.append("Error en API")
