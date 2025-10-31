@@ -1,7 +1,8 @@
 funciones/aws_managers/config.py
 funciones/config.py
 sealand/config.py
-app_lealtad/config.py
+enco_appLealtad/config.py
+enco_sistemaPos/config.py
 upaep/config.py
 cotemar/config.py
 sisamex/config.py

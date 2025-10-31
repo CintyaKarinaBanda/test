@@ -11,17 +11,17 @@ def create_client(API_KEY, API_SECRET, ACCOUNT_SID):
 def obtener_mensajes(client, periodo=24, limite=1000):
     import time
     max_retries = 3
-    
+
     for attempt in range(max_retries):
         try:
             since = datetime.now(timezone.utc) - timedelta(hours=periodo)
-            
+
             # Usar filtros de fecha de Twilio directamente
             msgs = client.messages.list(
                 date_sent_after=since,
                 limit=limite
             )
-            
+
             messages = []
             for m in msgs:
                 dt = m.date_sent or m.date_created
@@ -66,7 +66,7 @@ def calcular_tiempo_respuesta(messages):
                         if delta >= 0:
                             deltas.append(delta)
                         break
-    
+
     if deltas:
         return {"promedio": sum(deltas) / len(deltas), "pares": len(deltas)}
     return {"promedio": None, "pares": 0}
@@ -77,7 +77,7 @@ def consultar_twilio_messages(API_KEY, API_SECRET, ACCOUNT_SID, periodo=24):
         messages = obtener_mensajes(client, periodo)
         stats = calcular_estadisticas(messages)
         tiempo_resp = calcular_tiempo_respuesta(messages)
-        
+
         return {
             "estadisticas": stats,
             "tiempo_respuesta": tiempo_resp,
