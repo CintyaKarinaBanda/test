@@ -16,44 +16,69 @@ COMENTARIOS = []
 #Inicio del Proceso para las Instancias
 def get_instance_status(REGION, include_names=None, exclude_names=None, all_instances=False, ROLE_ARN=None, account_name='Default'):
     #Función para trabajar simultaneamente
+    print(f"[DEBUG] Iniciando get_instance_status - Región: {REGION}, Include: {include_names}, Exclude: {exclude_names}")
+    
     if ROLE_ARN:
+        print(f"[DEBUG] Usando assume_role con ARN: {ROLE_ARN}")
         session = assume_role(ROLE_ARN, REGION)
         ec2_client = session.client('ec2')
         cw_client = session.client('cloudwatch')
     else:
+        print(f"[DEBUG] Usando credenciales por defecto")
         ec2_client = boto3.client('ec2', region_name=REGION)
         cw_client = boto3.client('cloudwatch', region_name=REGION)
 
     response = ec2_client.describe_instances()
+    print(f"[DEBUG] Total reservations encontradas: {len(response['Reservations'])}")
 
     instances_info = []
+    total_instances = 0
+    filtered_instances = 0
+    running_instances = 0
+    
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
 
         for reservation in response['Reservations']:
             for instance in reservation['Instances']:
+                total_instances += 1
                 name = next((tag['Value'] for tag in instance.get('Tags', []) if tag.get('Key') == 'Name'), 'Unnamed')
+                instance_id = instance['InstanceId']
+                state = instance['State']['Name']
+                
+                print(f"[DEBUG] Instancia {instance_id}: nombre='{name}', estado='{state}'")
                 
                 # Filtrar instancias
                 should_include = False
                 
                 if all_instances:
                     should_include = True
+                    print(f"[DEBUG] Incluida por all_instances=True")
                 elif include_names:
                     should_include = any(keyword.lower() in name.lower() for keyword in include_names)
+                    print(f"[DEBUG] Filtro include_names: {should_include} (buscando {include_names} en '{name}')")
                 
                 if exclude_names and should_include:
-                    should_include = not any(keyword.lower() in name.lower() for keyword in exclude_names)
+                    excluded = any(keyword.lower() in name.lower() for keyword in exclude_names)
+                    should_include = not excluded
+                    print(f"[DEBUG] Filtro exclude_names: excluida={excluded} (buscando {exclude_names} en '{name}')")
                 
                 if should_include:
-                    state = instance['State']['Name']
+                    filtered_instances += 1
+                    print(f"[DEBUG] Instancia {name} ({instance_id}) INCLUIDA")
                     if state == "running":
-                        instance_id = instance['InstanceId']
+                        running_instances += 1
+                        print(f"[DEBUG] Procesando instancia running: {name}")
                         futures.append(executor.submit(process_instance_metrics, cw_client, ec2_client, instance_id, name, account_name))
+                    else:
+                        print(f"[DEBUG] Instancia {name} no está running (estado: {state})")
+                else:
+                    print(f"[DEBUG] Instancia {name} ({instance_id}) EXCLUIDA")
 
         for future in concurrent.futures.as_completed(futures):
             instances_info.append(future.result())
 
+    print(f"[DEBUG] Resumen: {total_instances} total, {filtered_instances} filtradas, {running_instances} running, {len(instances_info)} procesadas")
     return instances_info
 
 def process_ec2_metrics(REGION, ROLE_ARN, include_names=None, exclude_names=None, all_instances=False, account_name='Default'):
