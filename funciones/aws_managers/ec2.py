@@ -110,10 +110,15 @@ def process_instance_metrics(cw_client, ec2_client, instance_id, name, account_n
             cpu_max_ignore = alerts.get('cpu_max_ignore', 100)
             cpu_value = metric_data[position] if position < len(metric_data) else metric_data[2]
             
-            # Solo alertar si está por encima del threshold pero por debajo del límite de ignorar
-            if (cpu_value >= threshold and cpu_value < cpu_max_ignore):
-                metric_type = ['mínimo', 'máximo', 'promedio'][position] if position < 3 else 'promedio'
-                add_comment(f'CPU Utilization: el {metric_type} es {cpu_value}% (mayor a {threshold}%) en la instancia {instance_id}')
+            # Lógica: alertar si avg >= threshold, pero NO alertar si max >= cpu_max_ignore (autoscaling)
+            avg_cpu = metric_data[2] if len(metric_data) > 2 else cpu_value
+            max_cpu = metric_data[1] if len(metric_data) > 1 else cpu_value
+            
+            # Solo alertar si avg >= threshold Y max < cpu_max_ignore
+            if avg_cpu >= threshold:
+                if max_cpu < cpu_max_ignore:
+                    add_comment(f'CPU Utilization: el promedio es {avg_cpu}% (mayor a {threshold}%) en la instancia {instance_id}')
+                # Si max >= cpu_max_ignore, no alertar (es autoscaling)
 
     response = ec2_client.describe_volumes(Filters=[{'Name': 'attachment.instance-id', 'Values': [instance_id]}])
     volume_id = None

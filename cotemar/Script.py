@@ -29,7 +29,7 @@ if __name__ == "__main__":
         stats = resultado_twilio["estadisticas"]
         tiempo_resp = resultado_twilio["tiempo_respuesta"]
 
-        print(f"Mensajes ├║ltimas 24h: {stats['total']}")
+        print(f"Mensajes Ultimas 24h: {stats['total']}")
         print(f"Inbound: {stats['inbound']} | Outbound: {stats['outbound']}")
         if tiempo_resp["promedio"]:
             print(f"Tiempo respuesta promedio: {tiempo_resp['promedio']:.1f}s")
