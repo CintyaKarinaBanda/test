@@ -24,7 +24,12 @@ if __name__ == "__main__":
 
     try:
         # Monitoreo EC2
+        print(f"Consultando EC2 en región {REGION} con filtros: include=['lealtad'], exclude=['bastion']")
         ec2_data = process_ec2_metrics(REGION, ROLE_ARN, include_names=['lealtad'], exclude_names=['bastion'])
+        print(f"EC2 data obtenida: {len(ec2_data) if ec2_data else 0} instancias")
+        if ec2_data:
+            for i, instance in enumerate(ec2_data):
+                print(f"Instancia {i+1}: {instance[0] if instance else 'Sin nombre'}")
         write_report(ec2_data, start_row=5, start_col=2, target_filename=target_filename)
         
     except Exception as e:
@@ -32,9 +37,14 @@ if __name__ == "__main__":
         comentarios.append("Error EC2")
 
     #Finalizar el CheckList
-    comentarios.extend(return_comments())
-    comentarios.extend(return_ec2_comments())
+    global_comments = return_comments()
+    ec2_comments = return_ec2_comments()
+    print(f"Comentarios globales: {global_comments}")
+    print(f"Comentarios EC2: {ec2_comments}")
+    comentarios.extend(global_comments)
+    comentarios.extend(ec2_comments)
     final_comments = comentarios if comentarios else ['Todo Ok']
+    print(f"Comentarios finales: {final_comments}")
     write_column(final_comments, start_row=20, start_col=15, target_filename=target_filename)
 
     #Actualizacion en Xoc
