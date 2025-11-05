@@ -40,9 +40,6 @@ if __name__ == "__main__":
         twilio_data = [stats['total'], f'Entrada: {inbound}, Salida: {outbound}', tiempo_resp.get('promedio', 0)]
         write_column(twilio_data, start_row=10, start_col=3, target_filename=target_filename)
 
-        if stats['total'] == 0:
-            comentarios.append("Sin actividad en Twilio")
-
     except Exception as e:
         print(f"Error consultando Twilio: {e}")
         comentarios.append("Error Twilio")
@@ -63,8 +60,7 @@ if __name__ == "__main__":
         print(f"Error consultando API Gateway: {e}")
         comentarios.append("Error API Gateway")
 
-
-    #Finalizar el CheckList
+    # Finalizar el CheckList
     final_comments = comentarios if comentarios else ["Todo Ok"]
     write_column(final_comments, start_row=16, start_col=2, target_filename=target_filename)
 
