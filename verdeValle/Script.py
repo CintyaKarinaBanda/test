@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     try:
         # Monitoreo EC2
-        ec2_data = process_ec2_metrics(REGION, ROLE_ARN, include_names=['lealtad'], exclude_names=['bastion'])
+        ec2_data = process_ec2_metrics(REGION, ROLE_ARN, include_names=['PAWS'], exclude_names=['bastion'], account_name='App Lealtad')
         write_report(ec2_data, start_row=5, start_col=2, target_filename=target_filename)
         
     except Exception as e:
